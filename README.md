@@ -1,0 +1,88 @@
+# hmpc
+
+An HPC-inspired MPC library.
+
+This work is a work in progress and an academic prototype.
+As such, some features are still missing (e.g., an MPC API built on lower-level primitives) and it is not meant to be used in production environments.
+
+## Preparing a Build Environment 🧰
+
+We tested the following containerized build environments for our software:
+[Dev Containers](https://code.visualstudio.com/docs/devcontainers/tutorial) and
+[Docker](https://www.docker.com/).
+Note that our setup only accounts for CPU-based builds for Dev Containers.
+We provide instructions for CPU-based and GPU-based builds using Docker.
+
+The build environment builds a recent version of [the LLVM-based oneAPI data parallel C++ compiler](https://github.com/intel/llvm) from source.
+This might take some time.
+
+
+### Dev Container
+
+All files to create a build environment with Dev Containers are already set up.
+Simply start Visual Studio Code and select "Reopen in Container" with the Dev Containers extension.
+This basically automates the steps shown below for Docker.
+
+
+### Docker
+
+The following will create a Docker image called "hmpc" that has all required tools to build our software.
+
+```bash
+# build image
+docker buildx build --tag hmpc --build-arg user_id="$(id -u)" --build-arg group_id="$(id -g)" --file .devcontainer/Containerfile .
+```
+After setting up the container, you can start it via
+```bash
+# run container
+docker run --rm -it --mount type=bind,source="$(pwd)",target=/workspaces/hmpc hmpc
+```
+
+For CUDA-enabled containers (see the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu) and [Nvidia Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)), run
+```bash
+# Alternative:
+# build image
+docker buildx build --tag hmpc:cuda --build-arg cuda_version="${CUDA_VERSION:?}" --build-arg user_id="$(id -u)" --build-arg group_id="$(id -g)" --build-context cuda="${CUDA_HOME:?}" --file .devcontainer/cuda/Containerfile .
+# run container
+docker run --rm -it --gpus all --mount type=bind,source="$(pwd)",target=/workspaces/hmpc --mount type=bind,source="${CUDA_HOME:?}",target="/opt/cuda-${CUDA_VERSION:?}" hmpc:cuda
+```
+
+
+## Build 🏗
+
+In the container or Dev Container, you can build our software using [CMake](https://cmake.org/).
+
+```bash
+# configure
+cmake --preset default
+# build
+cmake --build --preset default
+```
+
+*Or*, if you want to build our software with CUDA support, use the following to configure and build.
+
+```bash
+# Alternative:
+# configure
+cmake --preset cuda
+# build
+cmake --build --preset cuda
+```
+
+
+## Running Tests 🧪
+
+In the container or Dev Container, you can test our software using `ctest` (part of [CMake](https://cmake.org/)).
+
+```bash
+# test
+ctest --preset default
+```
+
+*Or*, if you built our software with CUDA support, use the following to test after the build.
+
+```bash
+# Alternative:
+# test
+ctest --preset cuda
+```

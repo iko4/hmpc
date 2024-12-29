@@ -1,0 +1,31 @@
+{
+    "build":
+    {
+        "dockerfile": "Containerfile",
+        "context": ".."
+    },
+
+    "remoteUser": "vscode",
+
+    "runArgs":
+    [
+        "--device=/dev/dri",
+        "--net=host"
+    ],
+
+    "customizations":
+    {
+        "vscode":
+        {
+            "extensions":
+            [
+                "editorconfig.editorconfig",
+                "ms-vscode.cpptools-extension-pack",
+                "ms-azuretools.vscode-docker",
+                "ms-python.python",
+                "rust-lang.rust-analyzer",
+                "streetsidesoftware.code-spell-checker"
+            ]
+        }
+    }
+}

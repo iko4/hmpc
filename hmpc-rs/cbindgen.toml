@@ -1,0 +1,36 @@
+language = "C++"
+pragma_once = true
+include_version = true
+namespace = "hmpc::ffi"
+braces = "NextLine"
+tab_width = 4
+documentation = true
+style = "tag"
+usize_is_size_t = true
+
+[fn]
+must_use = "[[nodiscard]]"
+
+[enum]
+rename_variants = "SnakeCase"
+must_use = "[[nodiscard]]"
+
+[struct]
+must_use = "[[nodiscard]]"
+
+[export.body]
+"NetworkStatistics" = """
+friend constexpr bool operator==(NetworkStatistics const&, NetworkStatistics const&) noexcept = default;
+"""
+
+[export.rename]
+"Nullable" = "NullablePtr"
+"NullableData" = "NullableDataPtr"
+"Broadcast" = "BroadcastMetadata"
+"Gather" = "GatherMetadata"
+"AllGather" = "AllGatherMetadata"
+"AllToAll" = "AllToAllMetadata"
+
+[defines]
+"feature = statistics" = "HMPC_ENABLE_STATISTICS"
+"feature = signing" = "HMPC_ENABLE_SIGNING"

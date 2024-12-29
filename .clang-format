@@ -1,0 +1,115 @@
+Language: Cpp
+AccessModifierOffset: -4
+AllowShortBlocksOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: false
+AlignAfterOpenBracket: BlockIndent
+AlignEscapedNewlines: DontAlign
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BitFieldColonSpacing: Both
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: true
+  BeforeWhile: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+BreakBeforeConceptDeclarations: Always
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+BreakStringLiterals: false
+BreakTemplateDeclarations: Yes
+ColumnLimit: 0
+CompactNamespaces: false
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: LogicalBlock
+FixNamespaceComments: false
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: 'catch_helpers.hpp'
+    Priority: -1
+  - Regex: '^<hmpc/'
+    Priority: 0
+  - Regex: '^<.+/'
+    Priority: 2
+IndentAccessModifiers: false
+IndentCaseBlocks: true
+IndentExternBlock: Indent
+IndentPPDirectives: BeforeHash
+IndentRequiresClause: true
+IndentWidth: 4
+InsertNewlineAtEOF: true
+IntegerLiteralSeparator:
+  Binary: 4
+  BinaryMinDigits: 6
+  Decimal: 3
+  DecimalMinDigits : 5
+  Hex: 4
+  HexMinDigits: 6
+LambdaBodyIndentation: OuterScope
+LineEnding: LF
+Macros:
+  - HMPC_PRIVATE_MEMBER(x)=x
+MainIncludeChar: AngleBracket
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: All
+PackConstructorInitializers: NextLineOnly
+PointerAlignment: Left
+QualifierAlignment: Custom
+QualifierOrder:
+  - static
+  - friend
+  - constexpr
+  - inline
+  - type
+  - const
+  - volatile
+ReferenceAlignment: Left
+RequiresClausePosition: OwnLine
+RequiresExpressionIndentation: OuterScope
+SeparateDefinitionBlocks: Leave
+SortIncludes: CaseSensitive
+SortUsingDeclarations: Lexicographic
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeJsonColon: false
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: false
+  AfterFunctionDeclarationName: false
+  AfterFunctionDefinitionName: false
+  AfterIfMacros: false
+  AfterOverloadedOperator: false
+  AfterPlacementOperator: true
+  AfterRequiresInClause: true
+  AfterRequiresInExpression: false
+  BeforeNonEmptyParentheses: false
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesInAngles: Never
+SpacesInParens: Never
+SpacesInSquareBrackets: false
+Standard: Latest
+UseTab: Never

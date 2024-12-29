@@ -1,0 +1,80 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired":
+    {
+        "major": 3,
+        "minor": 22,
+        "patch": 1
+    },
+    "configurePresets":
+    [
+        {
+            "name": "default",
+            "generator": "Ninja Multi-Config",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "binaryDir": "build",
+            "cacheVariables":
+            {
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
+        },
+        {
+            "name": "cuda",
+            "inherits": "default",
+            "cacheVariables":
+            {
+                "HMPC_ENABLE_CUDA": true
+            }
+        },
+        {
+            "name": "tidy",
+            "inherits": "default",
+            "cacheVariables":
+            {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+                "HMPC_TIDY": true
+            }
+        },
+        {
+            "name": "coverage",
+            "inherits": "default",
+            "cacheVariables":
+            {
+                "HMPC_TEST_COVERAGE": true
+            }
+        }
+    ],
+    "buildPresets":
+    [
+        {
+            "name": "default",
+            "configurePreset": "default",
+            "configuration": "Release"
+        },
+        {
+            "name": "cuda",
+            "configurePreset": "cuda",
+            "configuration": "Release"
+        },
+        {
+            "name": "tidy",
+            "configurePreset": "tidy",
+            "configuration": "Release",
+            "targets": ["tidy"]
+        },
+        {
+            "name": "coverage",
+            "configurePreset": "coverage",
+            "configuration": "RelWithDebInfo",
+            "targets": ["test-coverage"]
+        }
+    ],
+    "testPresets":
+    [
+        {
+            "name": "default",
+            "configurePreset": "default",
+            "configuration": "Release"
+        }
+    ]
+}

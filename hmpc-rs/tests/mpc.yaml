@@ -1,0 +1,22 @@
+parties:
+  0: localhost:8000
+  1: localhost:8001
+  2:
+    name: localhost
+    port: 8002
+  3:
+    name: localhost
+    port: 8003
+  4:
+    name: localhost
+    port: 8004
+  10: localhost
+  11: localhost:5001
+  12: localhost:5002
+  13: localhost:5003
+  14: localhost:5004
+  20: localhost:6000
+  21: localhost:6001
+  22: localhost:6002
+  23: localhost:6003
+port: 5000
