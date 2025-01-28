@@ -202,7 +202,10 @@ impl ReceiveMessage
         const MESSAGE_DATATYPE_SIZE: usize = size_of::<MessageDatatype>();
         const MESSAGE_ID_SIZE: usize = size_of::<MessageID>();
 
-        const TOO_SHORT: ServerError = ServerError::ReadExact(quinn::ReadExactError::FinishedEarly);
+        fn too_short<T>(slice: &[u8]) -> Result<T, ServerError>
+        {
+            Err(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(slice.len())))
+        }
 
         let mut signature = [0u8; SIGNATURE_SIZE];
         stream.read_exact(signature.as_mut_slice()).await?;
@@ -212,19 +215,19 @@ impl ReceiveMessage
         let message = full_message.as_slice();
 
         let (message_kind, message) = message.split_at(MESSAGE_KIND_SIZE);
-        let message_kind = MessageKind::from_le_bytes(message_kind.try_into().or(Err(TOO_SHORT))?)?;
+        let message_kind = MessageKind::from_le_bytes(message_kind.try_into().or(too_short(message_kind))?)?;
 
         let (datatype, message) = message.split_at(MESSAGE_DATATYPE_SIZE);
-        let datatype = MessageDatatype::from_le_bytes(datatype.try_into().or(Err(TOO_SHORT))?);
+        let datatype = MessageDatatype::from_le_bytes(datatype.try_into().or(too_short(datatype))?);
 
         let (sender, message) = message.split_at(PARTY_ID_SIZE);
-        let sender = PartyID::from_le_bytes(sender.try_into().or(Err(TOO_SHORT))?);
+        let sender = PartyID::from_le_bytes(sender.try_into().or(too_short(sender))?);
 
         let (receiver, message) = message.split_at(PARTY_ID_SIZE);
-        let receiver = PartyID::from_le_bytes(receiver.try_into().or(Err(TOO_SHORT))?);
+        let receiver = PartyID::from_le_bytes(receiver.try_into().or(too_short(receiver))?);
 
         let (message_id, message) = message.split_at(MESSAGE_ID_SIZE);
-        let message_id = MessageID::from_le_bytes(message_id.try_into().or(Err(TOO_SHORT))?);
+        let message_id = MessageID::from_le_bytes(message_id.try_into().or(too_short(message_id))?);
 
         let data = message.into();
         verification_keys.get(&sender)

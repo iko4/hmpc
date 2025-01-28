@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use log::{error, info};
-use quinn::Connecting;
+use quinn::Incoming;
 
 use super::config::{Config, DEFAULT_TIMEOUT};
 #[cfg(feature = "signing")]
@@ -26,7 +26,7 @@ async fn make_server_config(id: PartyID, config: &Config) -> quinn::ServerConfig
     server_config
 }
 
-async fn handle_connection(id: PartyID, #[cfg(feature = "signing")] verification_keys: Arc<HashMap<PartyID, PublicKey>>, data_channel: tokio::sync::mpsc::Sender<DataCommand>, connecting: Connecting)
+async fn handle_connection(id: PartyID, #[cfg(feature = "signing")] verification_keys: Arc<HashMap<PartyID, PublicKey>>, data_channel: tokio::sync::mpsc::Sender<DataCommand>, connecting: Incoming)
 {
     let connection = connecting.await.unwrap();
     info!("[Party {}] Incoming connection: from {} established", id, connection.remote_address());

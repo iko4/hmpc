@@ -2,7 +2,7 @@
 ARG build=mpspdz
 # build=default or build=mpspdz
 
-FROM intel/oneapi-runtime@sha256:fc18ca92700a9020547edb9a279458d575cbe0841479605e73b69b3a80433f7d AS base-ubuntu
+FROM intel/oneapi-runtime@sha256:060ba4aa60a58add8d1d39fd49cd7b3bf274dde0f8ea4a988fdf6eb57abab97e AS base-ubuntu
 ARG cuda_version
 ENV CUDA_VERSION=$cuda_version
 ARG cuda_path=/opt/cuda-${cuda_version:?}
@@ -33,7 +33,7 @@ ENV CONFIGURE_ENV=${configure_env}
 ENV CONFIGURE_FEATURES=${configure_features}
 ENV COMPILE_PARALLELISM=${compile_parallelism}
 RUN --mount=type=bind,from=cuda,target=$CUDA_PATH \
-    git clone https://github.com/intel/llvm --branch nightly-2024-03-04 --depth=1 \
+    git clone https://github.com/intel/llvm --branch nightly-2025-01-02 --depth=1 \
  && env ${CONFIGURE_ENV} python3 /workspaces/dpcpp/llvm/buildbot/configure.py ${CONFIGURE_FEATURES} \
  && python3 /workspaces/dpcpp/llvm/buildbot/compile.py ${COMPILE_PARALLELISM} \
  && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=clang-tidy ${COMPILE_PARALLELISM} \
@@ -48,7 +48,7 @@ ENV LLVM_ROOT=/opt/dpcpp
 ENV VCPKG_ROOT=/workspaces/vcpkg
 ENV VCPKG_DISABLE_METRICS=1
 ENV PATH=$LLVM_ROOT/bin:$CMAKE_ROOT/bin:/home/vscode/.cargo/bin:$PATH
-ENV LD_LIBRARY_PATH=$LLVM_ROOT/lib:$CUDA_LIB_PATH:$CUDA_ROOT/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=$LLVM_ROOT/lib/x86_64-unknown-linux-gnu:$LLVM_ROOT/lib:$CUDA_LIB_PATH:$CUDA_ROOT/extras/CUPTI/lib64:$LD_LIBRARY_PATH
 ENV CPATH=$LLVM_ROOT/include:$LLVM_ROOT/include/sycl:$CPATH
 COPY --from=dpcpp-builder /workspaces/dpcpp/llvm/build/install/ $LLVM_ROOT
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends \
@@ -61,9 +61,9 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -
  && useradd --create-home -u ${user_id:?} -g ${group_id:?} --shell /bin/bash vscode \
  && mkdir -p $CMAKE_ROOT \
  && cd $CMAKE_ROOT \
- && curl -sSfLO https://github.com/Kitware/CMake/releases/download/v3.29.2/cmake-3.29.2-linux-x86_64.sh \
- && sh ./cmake-3.29.2-linux-x86_64.sh --skip-license --prefix=/opt/cmake \
- && rm ./cmake-3.29.2-linux-x86_64.sh
+ && curl -sSfLO https://github.com/Kitware/CMake/releases/download/v3.31.5/cmake-3.31.5-linux-x86_64.sh \
+ && sh ./cmake-3.31.5-linux-x86_64.sh --skip-license --prefix=/opt/cmake \
+ && rm ./cmake-3.31.5-linux-x86_64.sh
 USER vscode
 WORKDIR /workspaces
 COPY --chown=vscode requirements.txt /home/vscode/requirements.txt
@@ -71,7 +71,7 @@ COPY --chown=vscode requirements.txt /home/vscode/requirements.txt
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
  && rustup toolchain install nightly \
  && cargo install \
-    cbindgen@0.26.0 \
+    cbindgen@0.28.0 \
  && cd /workspaces \
  && git clone https://github.com/microsoft/vcpkg --depth=1 \
  && $VCPKG_ROOT/bootstrap-vcpkg.sh -disableMetrics \
@@ -81,7 +81,7 @@ WORKDIR /workspaces/hmpc
 FROM dev-default AS dev-mpspz
 USER root
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends \
-    libboost-dev libboost-thread-dev \
+    libboost-dev libboost-filesystem-dev libboost-thread-dev \
     libgmp-dev \
     libntl-dev \
     libsodium-dev \

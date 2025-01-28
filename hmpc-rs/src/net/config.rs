@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+#[cfg(feature = "signing")]
+use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
@@ -7,6 +9,8 @@ use std::time::Duration;
 use std::{env, fs};
 
 use config::{ConfigError, File};
+use rustls::pki_types::pem::PemObject;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use thiserror::Error;
@@ -274,10 +278,10 @@ impl Config
     /// If the file could not be read
     /// # Panics
     /// If `cert_dir` is `None`
-    pub async fn cert(&self, id: PartyID) -> Result<rustls::Certificate, tokio::io::Error>
+    pub async fn cert(&self, id: PartyID) -> Result<CertificateDer, tokio::io::Error>
     {
         let cert = tokio::fs::read(self.cert_filename(id)).await?;
-        Ok(rustls::Certificate(cert))
+        Ok(CertificateDer::from(cert))
     }
 
     /// Load all certificates from disk
@@ -292,7 +296,7 @@ impl Config
         let mut certs = rustls::RootCertStore::empty();
         for &id in self.parties.keys()
         {
-            certs.add(&self.cert(id).await?)?;
+            certs.add(self.cert(id).await?)?;
         }
         Ok(certs)
     }
@@ -302,11 +306,13 @@ impl Config
     /// If the file could not be read
     /// # Panics
     /// If `cert_dir` or `cert_keys_dir` is `None`
-    pub async fn cert_and_key(&self, id: PartyID) -> Result<(rustls::Certificate, rustls::PrivateKey), tokio::io::Error>
+    pub async fn cert_and_key(&self, id: PartyID) -> Result<(CertificateDer<'static>, PrivateKeyDer<'static>), tokio::io::Error>
     {
         let cert = tokio::fs::read(self.cert_filename(id)).await?;
         let key = tokio::fs::read(self.cert_key_filename(id)).await?;
-        Ok((rustls::Certificate(cert), rustls::PrivateKey(key)))
+        let cert = CertificateDer::from(cert);
+        let key = PrivateKeyDer::Pkcs8(key.into());
+        Ok((cert, key))
     }
 
     /// Load the certificate and private key of party `id` from disk
@@ -314,11 +320,13 @@ impl Config
     /// If the file could not be read
     /// # Panics
     /// If `cert_dir` or `cert_keys_dir` is `None`
-    pub fn cert_and_key_blocking(&self, id: PartyID) -> Result<(rustls::Certificate, rustls::PrivateKey), std::io::Error>
+    pub fn cert_and_key_blocking(&self, id: PartyID) -> Result<(CertificateDer<'static>, PrivateKeyDer<'static>), std::io::Error>
     {
         let cert = fs::read(self.cert_filename(id))?;
         let key = fs::read(self.cert_key_filename(id))?;
-        Ok((rustls::Certificate(cert), rustls::PrivateKey(key)))
+        let cert = CertificateDer::from(cert);
+        let key = PrivateKeyDer::Pkcs8(key.into());
+        Ok((cert, key))
     }
 
     /// Load the verification key of party `id` from disk

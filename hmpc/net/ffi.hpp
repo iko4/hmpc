@@ -43,6 +43,8 @@ namespace hmpc::ffi
                 throw std::system_error(std::make_error_code(std::errc::timed_out), "connection timed out");
             case SendReceiveErrc::connection_locally_closed:
                 throw std::system_error(std::make_error_code(std::errc::connection_reset), "connection locally closed");
+            case SendReceiveErrc::connections_exhausted:
+                throw std::domain_error("connection identifiers");
             case SendReceiveErrc::application_closed:
                 throw std::system_error(std::make_error_code(std::errc::connection_reset), "application closed");
             case SendReceiveErrc::stream_finished_early:
@@ -51,8 +53,8 @@ namespace hmpc::ffi
                 throw std::system_error(std::make_error_code(std::errc::connection_reset), "stream reset");
             case SendReceiveErrc::stream_stopped:
                 throw std::system_error(std::make_error_code(std::errc::connection_reset), "stream stopped");
-            case SendReceiveErrc::stream_unknown:
-                throw std::system_error(std::make_error_code(std::errc::connection_refused), "stream unknown");
+            case SendReceiveErrc::stream_closed:
+                throw std::system_error(std::make_error_code(std::errc::connection_refused), "stream closed");
             case SendReceiveErrc::stream_illegal_ordered_read:
                 throw std::system_error(std::make_error_code(std::errc::operation_not_permitted), "stream illegal ordered read");
             case SendReceiveErrc::stream_rejected:

@@ -10,7 +10,7 @@ include(FetchContent)
 
 FetchContent_Declare(mpspdz-repository
     GIT_REPOSITORY https://github.com/data61/MP-SPDZ
-    GIT_TAG 2813c0ef0fa9ca48ced3f70b7081c071f0bd28fd
+    GIT_TAG 91321ff8cd373c36384ee97596642f77cfa6ce42 # v0.4.0
     GIT_SHALLOW ON
 )
 FetchContent_MakeAvailable(mpspdz-repository)
@@ -79,7 +79,7 @@ target_include_directories(mpspdz PUBLIC ${mpspdz-repository_SOURCE_DIR})
 target_compile_definitions(mpspdz PUBLIC
     MAX_MOD_SZ=3
 )
-target_link_options(mpspdz PUBLIC -lgmp -lgmpxx -lcrypto -lsodium -lssl -lboost_system)
+target_link_options(mpspdz PUBLIC -lgmp -lgmpxx -lcrypto -lsodium -lssl -lboost_system -lboost_filesystem)
 add_library(MP-SPDZ ALIAS mpspdz)
 
 add_executable(mpspdz-fma

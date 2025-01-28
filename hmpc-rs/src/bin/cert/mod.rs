@@ -4,18 +4,20 @@ use std::path::Path;
 
 use hmpc_rs::net::Config;
 use log::error;
-use rcgen::{Certificate, CertificateParams, PKCS_ED25519};
+use rcgen::{CertificateParams, CertifiedKey, KeyPair, PKCS_ED25519};
+use rustls::pki_types::pem::PemObject;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 
 use super::{verbose_info, verbose_warn, Cert, Common};
 
-fn create_certificate_files(certificate_filename: &Path, key_filename: &Path, name: &str, verbose: bool) -> Certificate
+fn create_certificate_files(certificate_filename: &Path, key_filename: &Path, name: &str, verbose: bool) -> CertifiedKey
 {
-    let mut params = CertificateParams::new(vec![name.into()]);
-    params.alg = &PKCS_ED25519;
-    let certificate = Certificate::from_params(params).expect("Could not generate self signed certificate");
+    let key_pair = KeyPair::generate_for(&PKCS_ED25519).expect("Could not generate keys");
+    let params = CertificateParams::new(vec![name.into()]).expect("Could not generate certificate parameters");
+    let certificate = params.self_signed(&key_pair).expect("Could not generate self signed certificate");
 
-    let cert = certificate.serialize_der().expect("Could not serialize certificate");
-    let key = certificate.serialize_private_key_der();
+    let cert = certificate.der();
+    let key = key_pair.serialized_der();
 
     fs::create_dir_all(
         certificate_filename
@@ -36,12 +38,12 @@ fn create_certificate_files(certificate_filename: &Path, key_filename: &Path, na
     verbose_info!(verbose, "wrote certificate file: {certificate_filename:?}");
     verbose_info!(verbose, "wrote key file: {key_filename:?}");
 
-    certificate
+    CertifiedKey { cert: certificate, key_pair }
 }
 
-fn create_signing_files(cert: &Certificate, verification_key_filename: &Path, signing_key_filename: &Path, verbose: bool)
+fn create_signing_files(cert: CertifiedKey, verification_key_filename: &Path, signing_key_filename: &Path, verbose: bool)
 {
-    let key_pair = cert.get_key_pair();
+    let key_pair = cert.key_pair;
     assert_eq!(key_pair.algorithm(), &PKCS_ED25519);
 
     let verification_key = key_pair.public_key_raw();
@@ -77,8 +79,8 @@ fn check_certificate_files(mut certificate_file: File, mut key_file: File, _name
     error!("Checking that the private key belongs to the certificate is not implemented");
     error!("Checking that the domain name belongs to the certificate is not implemented");
 
-    let _cert = rustls::Certificate(cert);
-    let _key = rustls::PrivateKey(key);
+    let _cert = CertificateDer::from(cert);
+    let _key = PrivateKeyDer::from_pem(rustls::pki_types::pem::SectionKind::EcPrivateKey, key);
 }
 
 
@@ -130,7 +132,7 @@ pub(super) fn run(common: Common, cli: Cert)
 
             let verification_key_filename = config.verification_key_filename(id);
             let signing_key_filename = config.signing_key_filename(id);
-            create_signing_files(&cert, &verification_key_filename, &signing_key_filename, verbose);
+            create_signing_files(cert, &verification_key_filename, &signing_key_filename, verbose);
         }
     }
 }

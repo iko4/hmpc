@@ -2,6 +2,7 @@ use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use log::{debug, info};
+use quinn::crypto::rustls::QuicClientConfig;
 use quinn::{Connection, TransportConfig};
 
 #[cfg(feature = "signing")]
@@ -22,7 +23,6 @@ async fn make_client(config: &Config) -> quinn::Endpoint
 async fn make_client_config(config: &Config) -> quinn::ClientConfig
 {
     let crypto = rustls::ClientConfig::builder()
-        .with_safe_defaults()
         .with_root_certificates(config.certs().await.unwrap())
         .with_no_client_auth();
 
@@ -31,7 +31,7 @@ async fn make_client_config(config: &Config) -> quinn::ClientConfig
         .unwrap()
         .max_idle_timeout(Some(DEFAULT_TIMEOUT.try_into().unwrap()));
 
-    let mut client_config = quinn::ClientConfig::new(Arc::new(crypto));
+    let mut client_config = quinn::ClientConfig::new(Arc::new(QuicClientConfig::try_from(crypto).unwrap()));
     client_config.transport_config(transport_config);
     client_config
 }
@@ -60,9 +60,9 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "signing")] signing_key:
         return;
     };
     debug!("[Party {}] Finished writing stream", id);
-    if let Err(e) = stream.finish().await
+    if let Err(e) = stream.finish()
     {
-        answer_channel.send(Err(ClientError::Write(e))).unwrap();
+        answer_channel.send(Err(ClientError::Write(e.into()))).unwrap();
         return;
     };
     answer_channel.send(Ok(())).unwrap();

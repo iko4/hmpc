@@ -19,9 +19,10 @@ pub enum SendErrc
     ConnectionReset,
     ConnectionTimedOut,
     ConnectionLocallyClosed,
+    ConnectionsExhausted,
     ApplicationClosed,
     StreamStopped,
-    StreamUnknown,
+    StreamClosed,
     StreamRejected,
 }
 
@@ -38,6 +39,7 @@ impl From<ConnectionError> for SendErrc
             ConnectionError::Reset => Self::ConnectionReset,
             ConnectionError::TimedOut => Self::ConnectionTimedOut,
             ConnectionError::LocallyClosed => Self::ConnectionLocallyClosed,
+            ConnectionError::CidsExhausted => Self::ConnectionsExhausted,
         }
     }
 }
@@ -55,7 +57,7 @@ impl From<SendError> for SendErrc
             {
                 WriteError::Stopped(_) => Self::StreamStopped,
                 WriteError::ConnectionLost(connection) => connection.into(),
-                WriteError::UnknownStream => Self::StreamUnknown,
+                WriteError::ClosedStream => Self::StreamClosed,
                 WriteError::ZeroRttRejected => Self::StreamRejected,
             },
         }
@@ -78,10 +80,11 @@ pub enum ReceiveErrc
     ConnectionReset,
     ConnectionTimedOut,
     ConnectionLocallyClosed,
+    ConnectionsExhausted,
     ApplicationClosed,
     StreamFinishedEarly,
     StreamReset,
-    StreamUnknown,
+    StreamClosed,
     StreamIllegalOrderedRead,
     StreamRejected,
     StreamTooLong,
@@ -104,6 +107,7 @@ impl From<ConnectionError> for ReceiveErrc
             ConnectionError::Reset => Self::ConnectionReset,
             ConnectionError::TimedOut => Self::ConnectionTimedOut,
             ConnectionError::LocallyClosed => Self::ConnectionLocallyClosed,
+            ConnectionError::CidsExhausted => Self::ConnectionsExhausted,
         }
     }
 }
@@ -116,7 +120,7 @@ impl From<ReadError> for ReceiveErrc
         {
             ReadError::Reset(_) => Self::StreamReset,
             ReadError::ConnectionLost(connection) => connection.into(),
-            ReadError::UnknownStream => Self::StreamUnknown,
+            ReadError::ClosedStream => Self::StreamClosed,
             ReadError::IllegalOrderedRead => Self::StreamIllegalOrderedRead,
             ReadError::ZeroRttRejected => Self::StreamRejected,
         }
@@ -133,7 +137,7 @@ impl From<ReceiveError> for ReceiveErrc
             ReceiveError::Receive(_) => Self::ChannelCouldNotReceive,
             ReceiveError::Server(ServerError::ReadExact(read)) => match read
             {
-                quinn::ReadExactError::FinishedEarly => Self::StreamFinishedEarly,
+                quinn::ReadExactError::FinishedEarly(_size) => Self::StreamFinishedEarly,
                 quinn::ReadExactError::ReadError(read) => read.into(),
             },
             ReceiveError::Server(ServerError::ReadToEnd(read)) => match read
@@ -170,11 +174,12 @@ pub enum SendReceiveErrc
     ConnectionReset,
     ConnectionTimedOut,
     ConnectionLocallyClosed,
+    ConnectionsExhausted,
     ApplicationClosed,
     StreamFinishedEarly,
     StreamReset,
     StreamStopped,
-    StreamUnknown,
+    StreamClosed,
     StreamIllegalOrderedRead,
     StreamRejected,
     StreamTooLong,
@@ -205,9 +210,10 @@ impl From<SendErrc> for SendReceiveErrc
             SendErrc::ConnectionReset => Self::ConnectionReset,
             SendErrc::ConnectionTimedOut => Self::ConnectionTimedOut,
             SendErrc::ConnectionLocallyClosed => Self::ConnectionLocallyClosed,
+            SendErrc::ConnectionsExhausted => Self::ConnectionsExhausted,
             SendErrc::ApplicationClosed => Self::ApplicationClosed,
             SendErrc::StreamStopped => Self::StreamStopped,
-            SendErrc::StreamUnknown => Self::StreamUnknown,
+            SendErrc::StreamClosed => Self::StreamClosed,
             SendErrc::StreamRejected => Self::StreamRejected,
         }
     }
@@ -230,10 +236,11 @@ impl From<ReceiveErrc> for SendReceiveErrc
             ReceiveErrc::ConnectionReset => Self::ConnectionReset,
             ReceiveErrc::ConnectionTimedOut => Self::ConnectionTimedOut,
             ReceiveErrc::ConnectionLocallyClosed => Self::ConnectionLocallyClosed,
+            ReceiveErrc::ConnectionsExhausted => Self::ConnectionsExhausted,
             ReceiveErrc::ApplicationClosed => Self::ApplicationClosed,
             ReceiveErrc::StreamFinishedEarly => Self::StreamFinishedEarly,
             ReceiveErrc::StreamReset => Self::StreamReset,
-            ReceiveErrc::StreamUnknown => Self::StreamUnknown,
+            ReceiveErrc::StreamClosed => Self::StreamClosed,
             ReceiveErrc::StreamIllegalOrderedRead => Self::StreamIllegalOrderedRead,
             ReceiveErrc::StreamRejected => Self::StreamRejected,
             ReceiveErrc::StreamTooLong => Self::StreamTooLong,
