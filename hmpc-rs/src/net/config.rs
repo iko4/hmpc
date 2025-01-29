@@ -243,7 +243,7 @@ impl Config
     #[must_use]
     pub fn cert_filename(&self, id: PartyID) -> PathBuf
     {
-        self.cert_dir.as_ref().unwrap().join(format!("{id}.der"))
+        self.cert_dir.as_ref().unwrap().join(format!("{id}.x509.cert.der"))
     }
 
     /// Filename of `id`'s certificate private key
@@ -252,7 +252,7 @@ impl Config
     #[must_use]
     pub fn cert_key_filename(&self, id: PartyID) -> PathBuf
     {
-        self.cert_keys_dir.as_ref().unwrap().join(format!("{id}.key"))
+        self.cert_keys_dir.as_ref().unwrap().join(format!("{id}.cert-private.key.der"))
     }
 
     /// Filename of `id`'s signature verification key
@@ -261,7 +261,7 @@ impl Config
     #[must_use]
     pub fn verification_key_filename(&self, id: PartyID) -> PathBuf
     {
-        self.sign_verify_dir.as_ref().unwrap().join(format!("{id}.der"))
+        self.sign_verify_dir.as_ref().unwrap().join(format!("{id}.ed25519-public.key.bin"))
     }
 
     /// Filename of `id`'s signing key
@@ -270,7 +270,7 @@ impl Config
     #[must_use]
     pub fn signing_key_filename(&self, id: PartyID) -> PathBuf
     {
-        self.sign_keys_dir.as_ref().unwrap().join(format!("{id}.key"))
+        self.sign_keys_dir.as_ref().unwrap().join(format!("{id}.ed25519-private.key.der"))
     }
 
     /// Load the certificate of party `id` from disk
