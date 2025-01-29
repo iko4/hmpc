@@ -10,6 +10,7 @@ use super::{DataCommand, MessageSize, NetCommand};
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum FromPrimitiveError
 {
+    FromU8(u8),
     FromU16(u16),
 }
 impl std::fmt::Display for FromPrimitiveError
@@ -18,6 +19,7 @@ impl std::fmt::Display for FromPrimitiveError
     {
         match *self
         {
+            Self::FromU8(value) => write!(f, "FromPrimitiveError(Could not convert from u8 value={value})"),
             Self::FromU16(value) => write!(f, "FromPrimitiveError(Could not convert from u16 value={value})"),
         }
     }
@@ -63,6 +65,10 @@ pub enum ClientError
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum ServerError
 {
+    #[error("Message format version does not match")]
+    VersionMismatch,
+    #[error("Message features do not match")]
+    FeatureMismatch,
     #[error(transparent)]
     ReadExact(#[from] ReadExactError),
     #[error(transparent)]

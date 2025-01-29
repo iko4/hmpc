@@ -1,7 +1,9 @@
 use ring::signature::{Ed25519KeyPair, Signature, UnparsedPublicKey, ED25519};
 
-pub(crate) struct PublicKey(UnparsedPublicKey<Vec<u8>>);
-pub(crate) struct PrivateKey(Ed25519KeyPair);
+#[derive(Debug)]
+pub struct PublicKey(UnparsedPublicKey<Vec<u8>>);
+#[derive(Debug)]
+pub struct PrivateKey(Ed25519KeyPair);
 
 impl PublicKey
 {

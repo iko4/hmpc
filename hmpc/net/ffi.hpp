@@ -27,12 +27,16 @@ namespace hmpc::ffi
                 throw std::invalid_argument("communicator");
             case SendReceiveErrc::invalid_metadata:
                 throw std::invalid_argument("metadata");
+            case SendReceiveErrc::version_mismatch:
+                throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "version mismatch");
+            case SendReceiveErrc::feature_mismatch:
+                throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "feature mismatch");
             case SendReceiveErrc::channel_could_not_receive:
                 throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "cannot receive on channel");
             case SendReceiveErrc::channel_could_not_send:
                 throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "cannot send on channel");
             case SendReceiveErrc::connection_version_mismatch:
-                throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "version mismatch");
+                throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "connection version mismatch");
             case SendReceiveErrc::connection_transport_error:
                 throw std::system_error(std::make_error_code(std::errc::protocol_error), "transport error");
             case SendReceiveErrc::connection_closed:

@@ -1,5 +1,3 @@
-use std::mem::size_of;
-
 use super::ptr::ReadData;
 use super::{MessageDatatype, MessageID, MessageKind, MessageSize, PartyID};
 
@@ -53,8 +51,6 @@ pub struct Message
     pub(crate) id: MessageID,
     pub(crate) size: MessageSize,
 }
-
-const _: () = assert!(size_of::<Message>() == size_of::<MessageKind>() + size_of::<MessageDatatype>() + 2 * size_of::<PartyID>() + size_of::<MessageID>() + size_of::<MessageSize>());
 
 impl Message
 {

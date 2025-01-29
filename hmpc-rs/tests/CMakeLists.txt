@@ -1,6 +1,6 @@
 add_test(
     NAME hmpc-rs
-    COMMAND cargo ${HMPC_RS_CARGO_TOOLCHAIN} test ${HMPC_RS_CARGO_ARGS}
+    COMMAND cargo ${HMPC_RS_CARGO_TOOLCHAIN} test ${HMPC_RS_CARGO_ARGS} -- --nocapture
     WORKING_DIRECTORY ${HMPC_RS_WORKING_DIR}
 )
 set_tests_properties(hmpc-rs

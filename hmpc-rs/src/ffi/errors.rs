@@ -72,6 +72,8 @@ pub enum ReceiveErrc
     Ok = 0,
     InvalidHandle,
     InvalidPointer,
+    VersionMismatch,
+    FeatureMismatch,
     ChannelCouldNotReceive,
     ChannelCouldNotSend,
     ConnectionVersionMismatch,
@@ -135,6 +137,8 @@ impl From<ReceiveError> for ReceiveErrc
         {
             ReceiveError::Send(_) => Self::ChannelCouldNotSend,
             ReceiveError::Receive(_) => Self::ChannelCouldNotReceive,
+            ReceiveError::Server(ServerError::VersionMismatch) => Self::VersionMismatch,
+            ReceiveError::Server(ServerError::FeatureMismatch) => Self::FeatureMismatch,
             ReceiveError::Server(ServerError::ReadExact(read)) => match read
             {
                 quinn::ReadExactError::FinishedEarly(_size) => Self::StreamFinishedEarly,
@@ -166,6 +170,8 @@ pub enum SendReceiveErrc
     InvalidSize,
     InvalidCommunicator,
     InvalidMetadata,
+    VersionMismatch,
+    FeatureMismatch,
     ChannelCouldNotReceive,
     ChannelCouldNotSend,
     ConnectionVersionMismatch,
@@ -228,6 +234,8 @@ impl From<ReceiveErrc> for SendReceiveErrc
             ReceiveErrc::Ok => Self::Ok,
             ReceiveErrc::InvalidHandle => Self::InvalidHandle,
             ReceiveErrc::InvalidPointer => Self::InvalidPointer,
+            ReceiveErrc::VersionMismatch => Self::VersionMismatch,
+            ReceiveErrc::FeatureMismatch => Self::FeatureMismatch,
             ReceiveErrc::ChannelCouldNotReceive => Self::ChannelCouldNotReceive,
             ReceiveErrc::ChannelCouldNotSend => Self::ChannelCouldNotSend,
             ReceiveErrc::ConnectionVersionMismatch => Self::ConnectionVersionMismatch,

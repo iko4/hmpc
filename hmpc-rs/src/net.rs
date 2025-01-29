@@ -32,8 +32,17 @@ const SIGNATURE_SIZE: usize = 64; // see https://ed25519.cr.yp.to/
 
 const MESSAGE_SIZE_LIMIT: usize = 2 << 32;
 
+const MESSAGE_FORMAT_VERSION: u8 = 0;
+
+const MESSAGE_FEATURE_FLAGS: u8 = {
+    let session_flag = cfg!(feature = "sessions") as u8;
+    let signing_flag = cfg!(feature = "signing") as u8;
+    session_flag
+        | (signing_flag << 1)
+};
+
 pub type PartyID = u16;
-#[repr(u16)]
+#[repr(u8)]
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub enum MessageKind
 {
@@ -93,7 +102,7 @@ pub enum MessageKind
     AllToAll = 6,
 }
 
-type MessageDatatypeUnderlying = u16;
+type MessageDatatypeUnderlying = u8;
 
 impl TryFrom<MessageDatatypeUnderlying> for MessageKind
 {
@@ -109,7 +118,7 @@ impl TryFrom<MessageDatatypeUnderlying> for MessageKind
             x if x == MessageKind::Gather as MessageDatatypeUnderlying => Ok(MessageKind::Gather),
             x if x == MessageKind::AllGather as MessageDatatypeUnderlying => Ok(MessageKind::AllGather),
             x if x == MessageKind::AllToAll as MessageDatatypeUnderlying => Ok(MessageKind::AllToAll),
-            x => Err(x.into()),
+            x => Err(FromPrimitiveError::FromU8(x)),
         }
     }
 }
@@ -122,13 +131,15 @@ impl MessageKind
         (self as MessageDatatypeUnderlying).to_le_bytes()
     }
 
-    fn from_le_bytes(bytes: [u8; Self::BYTE_SIZE]) -> Result<Self, FromPrimitiveError>
+    fn try_from_le_bytes(bytes: [u8; Self::BYTE_SIZE]) -> Result<Self, FromPrimitiveError>
     {
         let value = MessageDatatypeUnderlying::from_le_bytes(bytes);
         value.try_into()
     }
 }
 
+pub type MessageFormat = u8;
+pub type MessageFlags = u8;
 pub type MessageDatatype = u16;
 pub type MessageID = u64;
 pub type MessageSize = u64;
@@ -150,6 +161,8 @@ impl SendMessage
     {
         let message =
         [
+            MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice(),
+            MESSAGE_FEATURE_FLAGS.to_le_bytes().as_slice(),
             self.metadata.kind.to_le_bytes().as_slice(),
             self.metadata.datatype.to_le_bytes().as_slice(),
             self.metadata.sender.to_le_bytes().as_slice(),
@@ -163,13 +176,15 @@ impl SendMessage
 
         assert_eq!(signature.len(), SIGNATURE_SIZE);
 
-        stream.write_all(signature.as_ref()).await?;
-        stream.write_all(&message).await
+        stream.write_all(&message).await?;
+        stream.write_all(signature).await
     }
 
     #[cfg(not(feature = "signing"))]
     async fn write_to(self, stream: &mut SendStream) -> Result<(), WriteError>
     {
+        stream.write_all(MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice()).await?;
+        stream.write_all(MESSAGE_FEATURE_FLAGS.to_le_bytes().as_slice()).await?;
         stream.write_all(self.metadata.kind.to_le_bytes().as_slice()).await?;
         stream.write_all(self.metadata.datatype.to_le_bytes().as_slice()).await?;
         stream.write_all(self.metadata.sender.to_le_bytes().as_slice()).await?;
@@ -193,82 +208,86 @@ impl ReceiveMessage
         Self { metadata: metadata::Message::new(message_kind, datatype, sender, receiver, message_id, data.len() as MessageSize), data }
     }
 
-    #[cfg(feature = "signing")]
-    async fn read_from(verification_keys: &HashMap<PartyID, PublicKey>, stream: &mut RecvStream) -> Result<Self, ServerError>
+    fn build_from(message: &[u8]) -> Result<Self, ServerError>
     {
-
-        const PARTY_ID_SIZE: usize = size_of::<PartyID>();
+        const MESSAGE_FORMAT_VERSION_SIZE: usize = size_of::<MessageFormat>();
+        const MESSAGE_FEATURE_FLAGS_SIZE: usize = size_of::<MessageFlags>();
         const MESSAGE_KIND_SIZE: usize = size_of::<MessageKind>();
         const MESSAGE_DATATYPE_SIZE: usize = size_of::<MessageDatatype>();
         const MESSAGE_ID_SIZE: usize = size_of::<MessageID>();
+        const PARTY_ID_SIZE: usize = size_of::<PartyID>();
 
-        fn too_short<T>(slice: &[u8]) -> Result<T, ServerError>
+        fn too_short(slice: &[u8]) -> ServerError
         {
-            Err(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(slice.len())))
+            ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(slice.len()))
         }
 
-        let mut signature = [0u8; SIGNATURE_SIZE];
-        stream.read_exact(signature.as_mut_slice()).await?;
+        let (message_format_version, message) = message.split_first_chunk::<MESSAGE_FORMAT_VERSION_SIZE>()
+            .ok_or(too_short(message))?;
+        let message_format_version = MessageFormat::from_le_bytes(*message_format_version);
+        if message_format_version != MESSAGE_FORMAT_VERSION
+        {
+            return Err(ServerError::VersionMismatch);
+        }
 
-        let full_message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
+        let (message_feature_flags, message) = message.split_first_chunk::<MESSAGE_FEATURE_FLAGS_SIZE>()
+        .ok_or(too_short(message))?;
+        let message_feature_flags = MessageFlags::from_le_bytes(*message_feature_flags);
+        if message_feature_flags != MESSAGE_FEATURE_FLAGS
+        {
+            return Err(ServerError::FeatureMismatch);
+        }
 
-        let message = full_message.as_slice();
+        let (message_kind, message) = message.split_first_chunk::<MESSAGE_KIND_SIZE>()
+            .ok_or(too_short(message))?;
+        let message_kind = MessageKind::try_from_le_bytes(*message_kind)?;
 
-        let (message_kind, message) = message.split_at(MESSAGE_KIND_SIZE);
-        let message_kind = MessageKind::from_le_bytes(message_kind.try_into().or(too_short(message_kind))?)?;
+        let (datatype, message) = message.split_first_chunk::<MESSAGE_DATATYPE_SIZE>()
+            .ok_or(too_short(message))?;
+        let datatype = MessageDatatype::from_le_bytes(*datatype);
 
-        let (datatype, message) = message.split_at(MESSAGE_DATATYPE_SIZE);
-        let datatype = MessageDatatype::from_le_bytes(datatype.try_into().or(too_short(datatype))?);
+        let (sender, message) = message.split_first_chunk::<PARTY_ID_SIZE>()
+            .ok_or(too_short(message))?;
+        let sender = PartyID::from_le_bytes(*sender);
 
-        let (sender, message) = message.split_at(PARTY_ID_SIZE);
-        let sender = PartyID::from_le_bytes(sender.try_into().or(too_short(sender))?);
+        let (receiver, message) = message.split_first_chunk::<PARTY_ID_SIZE>()
+            .ok_or(too_short(message))?;
+        let receiver = PartyID::from_le_bytes(*receiver);
 
-        let (receiver, message) = message.split_at(PARTY_ID_SIZE);
-        let receiver = PartyID::from_le_bytes(receiver.try_into().or(too_short(receiver))?);
-
-        let (message_id, message) = message.split_at(MESSAGE_ID_SIZE);
-        let message_id = MessageID::from_le_bytes(message_id.try_into().or(too_short(message_id))?);
+        let (message_id, message) = message.split_first_chunk::<MESSAGE_ID_SIZE>()
+            .ok_or(too_short(message))?;
+        let message_id = MessageID::from_le_bytes(*message_id);
 
         let data = message.into();
-        verification_keys.get(&sender)
-            .map_or(Err(ServerError::UnknownSender), Ok)?
-            .verify(&full_message, &signature)
-            .or(Err(ServerError::SignatureVerification))?;
 
         Ok(Self::new(message_kind, datatype, sender, receiver, message_id, data))
+    }
+
+    #[cfg(feature = "signing")]
+    async fn read_from(verification_keys: &HashMap<PartyID, PublicKey>, stream: &mut RecvStream) -> Result<Self, ServerError>
+    {
+        let full_message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
+        let full_message = full_message.as_slice();
+
+        let (message, signature) = full_message.split_last_chunk::<SIGNATURE_SIZE>()
+            .ok_or(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(full_message.len())))?;
+
+        let result = Self::build_from(message)?;
+
+        verification_keys.get(&result.metadata.sender)
+            .map_or(Err(ServerError::UnknownSender), Ok)?
+            .verify(message, signature)
+            .or(Err(ServerError::SignatureVerification))?;
+
+        Ok(result)
     }
 
     #[cfg(not(feature = "signing"))]
     async fn read_from(stream: &mut RecvStream) -> Result<Self, ServerError>
     {
-        const PARTY_ID_SIZE: usize = size_of::<PartyID>();
-        const MESSAGE_KIND_SIZE: usize = size_of::<MessageKind>();
-        const MESSAGE_DATATYPE_SIZE: usize = size_of::<MessageDatatype>();
-        const MESSAGE_ID_SIZE: usize = size_of::<MessageID>();
+        let message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
 
-        let mut message_kind = [0u8; MESSAGE_KIND_SIZE];
-        stream.read_exact(message_kind.as_mut_slice()).await?;
-        let message_kind = MessageKind::from_le_bytes(message_kind)?;
-
-        let mut datatype = [0u8; MESSAGE_DATATYPE_SIZE];
-        stream.read_exact(datatype.as_mut_slice()).await?;
-        let datatype = MessageDatatype::from_le_bytes(datatype);
-
-        let mut sender = [0u8; PARTY_ID_SIZE];
-        stream.read_exact(sender.as_mut_slice()).await?;
-        let sender = PartyID::from_le_bytes(sender);
-
-        let mut receiver = [0u8; PARTY_ID_SIZE];
-        stream.read_exact(receiver.as_mut_slice()).await?;
-        let receiver = PartyID::from_le_bytes(receiver);
-
-        let mut message_id = [0u8; MESSAGE_ID_SIZE];
-        stream.read_exact(message_id.as_mut_slice()).await?;
-        let message_id = MessageID::from_le_bytes(message_id);
-
-        let data = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
-
-        Ok(Self::new(message_kind, datatype, sender, receiver, message_id, data))
+        Self::build_from(message.as_slice())
     }
 }
 
