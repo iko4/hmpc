@@ -9,7 +9,6 @@ use std::time::Duration;
 use std::{env, fs};
 
 use config::{ConfigError, File};
-use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};

@@ -139,6 +139,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_broadcast(queue: Nullable<Queu
 /// - `data` and `communicator` have to have the same length.
 /// - Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
 /// - Each `data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
+///
 /// Otherwise:
 /// - `data` has length 1.
 /// - The `data[0]` pointer has to be valid. (The function only checks for `nullptr`.)
@@ -190,6 +191,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_gather(queue: Nullable<Queue>, messa
 /// - `data[i]` and `communicator` have to have the same length.
 /// - Each `data[i][j]` pointer has to be valid. (The function only checks for `nullptr`.)
 /// - Each `data[i][j]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
+///
 /// Otherwise:
 /// - `data[i]` has length 1.
 /// - The `data[i][0]` pointer has to be valid. (The function only checks for `nullptr`.)

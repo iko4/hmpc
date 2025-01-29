@@ -4,6 +4,7 @@ use clap::{Args, Parser, Subcommand};
 use hmpc_rs::net::PartyID;
 
 mod cert;
+mod sign;
 
 macro_rules! verbose_info
 {

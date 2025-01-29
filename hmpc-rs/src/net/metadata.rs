@@ -64,10 +64,14 @@ impl Message
         Self { kind, datatype, sender, receiver, id, size }
     }
 
+    /// Build usable slice from data pointer
+    ///
+    /// # Panics
+    /// If message is too long for the current hardware platform (size cannot be represented in `usize`)
     #[must_use]
     pub fn data_as_slice(&self, ptr: &ReadData) -> &[u8]
     {
-        unsafe { std::slice::from_raw_parts(ptr.as_ptr(), self.size as usize) }
+        unsafe { std::slice::from_raw_parts(ptr.as_ptr(), usize::try_from(self.size).expect("Message too long for this platform")) }
     }
 }
 

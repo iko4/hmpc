@@ -51,10 +51,10 @@ fn check_size(x: usize, y: MessageSize) -> Result<(), SizeMismatchError>
     }
 }
 
-async fn collect_tasks<E: 'static>(mut tasks: JoinSet<Result<(), E>>) -> Result<(), SendReceiveError>
+async fn collect_tasks<E>(mut tasks: JoinSet<Result<(), E>>) -> Result<(), SendReceiveError>
 where
     SendReceiveError: From<E>,
-    E: std::fmt::Debug,
+    E: 'static + std::fmt::Debug,
 {
     let mut result = Ok(());
     while let Some(task_result) = tasks.join_next().await
