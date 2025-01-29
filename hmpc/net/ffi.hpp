@@ -11,7 +11,7 @@
 
 namespace hmpc::ffi
 {
-    [[noreturn]] void throw_exception(SendReceiveErrc errc) noexcept(false)
+    [[noreturn]] inline void throw_exception(SendReceiveErrc errc) noexcept(false)
     {
         switch (errc)
         {
@@ -94,6 +94,14 @@ namespace hmpc::net
         {
             using value_type = hmpc::net::message_datatype;
 
+            static constexpr bool is_little_endian = []()
+            {
+                constexpr auto one = T{1};
+                constexpr auto bytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(one);
+                static_assert(bytes[0] == std::byte{0} or bytes[0] == std::byte{1});
+                return bytes[0] == std::byte{1};
+            }();
+
             static constexpr value_type value = []()
             {
                 constexpr auto bit_tag = value_type{hmpc::core::limb_traits<T>::bit_size};
@@ -103,11 +111,6 @@ namespace hmpc::net
                 static_assert(std::numeric_limits<value_type>::is_integer);
                 static_assert(not std::numeric_limits<value_type>::is_signed);
                 static_assert(bit_tag >> (std::numeric_limits<value_type>::digits - 1) == value_type{}); // check that there is at least one bit unused
-
-                constexpr auto one = T{1};
-                constexpr auto bytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(one);
-                static_assert(bytes[0] == std::byte{0} or bytes[0] == std::byte{1});
-                constexpr auto is_little_endian = (bytes[0] == std::byte{1});
 
                 auto result = value_type{is_little_endian};
                 result <<= (std::numeric_limits<value_type>::digits - 1);

@@ -42,6 +42,7 @@ target_compile_definitions(device-tests PRIVATE HMPC_TESTING=1 HMPC_ASSERT_LEVEL
 catch_discover_tests(device-tests)
 
 add_executable(ffi-tests
+    net/ffi.cpp
     net/queue.cpp
 )
 target_include_directories(ffi-tests PRIVATE .)
