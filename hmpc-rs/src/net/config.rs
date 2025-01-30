@@ -16,12 +16,16 @@ use thiserror::Error;
 
 #[cfg(feature = "signing")]
 use super::sign::{PublicKey, PrivateKey};
-use super::PartyID;
+use super::{PartyID, SessionID, SESSION_ID_SIZE};
 
 pub type Port = u16;
 
 /// Name of environment variable that contains a path for a config file
-const ENVIRONMENT_VARIABLE: &str = "HMPC_CONFIG";
+const CONFIG_PATH_ENVIRONMENT_VARIABLE: &str = "HMPC_CONFIG";
+/// Name of environment variable that contains the session value
+const SESSION_ID_VALUE_ENVIRONMENT_VARIABLE: &str = "HMPC_SESSION_VALUE";
+/// Name of environment variable that contains the session string to be hashed
+const SESSION_ID_STRING_ENVIRONMENT_VARIABLE: &str = "HMPC_SESSION_STRING";
 /// Default path for config file
 const DEFAULT_PATH: &str = "mpc.yaml";
 /// Default port if none is given
@@ -138,6 +142,81 @@ impl<'de> Deserialize<'de> for PartyOrigin
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum Session
+{
+    /// Session is given as value that can be directly used as-is
+    /// TODO: Currently, deserializing u128 values does not work with the `config` crate, use `Parse` in a config
+    Value(SessionID),
+    /// Session is given as value that can be directly used as-is (after parsing)
+    Parse(String),
+    /// Session is given as string that will be hashed
+    String(String),
+}
+impl Session
+{
+    pub fn try_from_env() -> Option<Session>
+    {
+        env::var(SESSION_ID_VALUE_ENVIRONMENT_VARIABLE).map(Session::Parse).ok()
+            .or_else(|| env::var(SESSION_ID_STRING_ENVIRONMENT_VARIABLE).map(Session::String).ok())
+    }
+
+    pub fn unwrap(self) -> SessionID
+    {
+        if let Session::Value(value) = self
+        {
+            value
+        }
+        else
+        {
+            panic!("Session does not contain a (parsed) value")
+        }
+    }
+
+    pub fn value(&self) -> Result<SessionID, ParseIntError>
+    {
+        match self
+        {
+            Session::Value(value) => Ok(*value),
+            Session::Parse(s) =>
+            {
+                s.parse()
+            },
+            Session::String(s) =>
+            {
+                let mut sha = ring::digest::Context::new(&ring::digest::SHA256);
+
+                sha.update(s.as_bytes());
+
+                let digest = sha.finish();
+                let digest = digest.as_ref();
+
+                assert!(digest.len() >= SESSION_ID_SIZE);
+
+                // PANICS: Cannot panic because of above assert (that should always be true for SHA256 and u128)
+                let value = digest.first_chunk::<SESSION_ID_SIZE>()
+                    .map(|bytes| SessionID::from_le_bytes(*bytes)).unwrap();
+                Ok(value)
+            },
+        }
+    }
+
+    pub fn try_assign_value(&mut self) -> Result<&mut Self, ParseIntError>
+    {
+        match self
+        {
+            Session::Value(_) => Ok(self),
+            Session::Parse(_) | Session::String(_) =>
+            {
+                let value = self.value()?;
+                *self = Session::Value(value);
+                Ok(self)
+            }
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config
 {
     pub parties: BTreeMap<PartyID, PartyOrigin>,
@@ -146,6 +225,7 @@ pub struct Config
     pub cert_keys_dir: Option<PathBuf>,
     pub sign_verify_dir: Option<PathBuf>,
     pub sign_keys_dir: Option<PathBuf>,
+    pub session: Option<Session>,
 }
 impl Config
 {
@@ -375,7 +455,7 @@ impl Config
 #[must_use]
 pub fn path_from_env() -> Option<PathBuf>
 {
-    env::var(ENVIRONMENT_VARIABLE)
+    env::var(CONFIG_PATH_ENVIRONMENT_VARIABLE)
         .map_or(None, |config| Some(PathBuf::from(config)))
 }
 

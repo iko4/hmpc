@@ -389,27 +389,41 @@ impl Queue
     /// # Errors
     /// Fails if the `tokio` runtime cannot be constructed.
     /// Then, the errors are simply forwarded to the caller.
-    pub fn new(id: PartyID, config: Config) -> Result<Self, QueueError>
+    pub fn new(id: PartyID, mut config: Config) -> Result<Self, QueueError>
     {
         #[rustfmt::skip]
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()?;
 
+
+        #[cfg(feature = "sessions")]
+        {
+            use super::errors::SessionError;
+            if let Some(session) = config.session.as_mut()
+            {
+                session.try_assign_value().map_err(Into::<SessionError>::into)?;
+            }
+            else
+            {
+                return Err(SessionError::NotFound.into());
+            }
+        }
+
         let (data_channel, receive_channel) = tokio::sync::mpsc::channel(CHANNEL_CAPACITY);
 
         // thread to handle data access
-        runtime.spawn(message_buffer::run_message_buffer(id, receive_channel));
+        runtime.spawn(message_buffer::run(id, receive_channel));
 
         let (net_channel, receive_channel) = tokio::sync::mpsc::channel(CHANNEL_CAPACITY);
 
         // thread to handle receiving data
         // spawns new threads for each connection
-        runtime.spawn(server::run_server(id, config.clone(), data_channel.clone()));
+        runtime.spawn(server::run(id, config.clone(), data_channel.clone()));
 
         // thread to handle sending data
         // spawns new threads for each connection
-        runtime.spawn(client::run_client(id, config, receive_channel));
+        runtime.spawn(client::run(id, config, receive_channel));
 
         #[cfg(not(feature = "statistics"))]
         {

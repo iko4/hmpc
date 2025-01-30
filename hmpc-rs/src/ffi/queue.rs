@@ -1,7 +1,7 @@
 use log::{debug, error, info, warn};
 
 use super::errors::SendReceiveErrc;
-use super::{check_communicator, check_handle, check_non_null_vec, check_pointer, check_size_eq, check_span, check_vec, free_nullable, nullable, set_logger, Communicator, Config, NetworkStatistics, NullableData, PartyID, Queue, Span, Span2d};
+use super::{check_communicator, check_mut_pointer, check_non_null_vec, check_pointer, check_size_eq, check_span, check_vec, free_nullable, nullable, set_logger, Communicator, Config, NetworkStatistics, NullableData, PartyID, Queue, Span, Span2d};
 use crate::net::metadata::{AllGather, AllToAll, Broadcast, Gather};
 use crate::net::ptr::Nullable;
 
@@ -76,7 +76,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_broadcast(queue: Nullable<Queue>, me
 {
     info!("Broadcast");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_pointer!(data, SendReceiveErrc::InvalidPointer);
     check_communicator!(communicator);
 
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_broadcast(queue: Nullable<Queu
 {
     info!("Multi broadcast");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_vec!(messages);
     check_communicator!(communicator);
     check_non_null_vec!(data);
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_gather(queue: Nullable<Queue>, messa
 {
     info!("Gather");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_communicator!(communicator);
     check_non_null_vec!(data);
 
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_gather(queue: Nullable<Queue>,
 {
     info!("Multi gather");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_vec!(messages);
     check_communicator!(communicator);
     check_non_null_vec!(data);
@@ -251,7 +251,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_all_gather(queue: Nullable<Queue>, m
 {
     info!("All-gather");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_communicator!(communicator);
     check_non_null_vec!(data);
     check_size_eq!(communicator.len(), data.len());
@@ -283,7 +283,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_gather(queue: Nullable<Que
 {
     info!("Multi all-gather");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_vec!(messages);
     check_communicator!(communicator);
     check_non_null_vec!(data);
@@ -317,7 +317,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_all_gather(queue: Nullable<
 {
     info!("Extended all-gather");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_communicator!(senders);
     check_communicator!(receivers);
     check_non_null_vec!(data);
@@ -358,7 +358,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_multi_all_gather(queue: Nul
 {
     info!("Extended multi all-gather");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_vec!(messages);
     check_communicator!(senders);
     check_communicator!(receivers);
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_all_to_all(queue: Nullable<Queue>, m
 {
     info!("All-to-all");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_communicator!(communicator);
     check_non_null_vec!(send_data);
     check_non_null_vec!(receive_data);
@@ -436,7 +436,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_to_all(queue: Nullable<Que
 {
     info!("Multi all-to-all");
 
-    check_handle!(queue);
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
     check_vec!(messages);
     check_communicator!(communicator);
     check_non_null_vec!(send_data);

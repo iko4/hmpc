@@ -1,3 +1,5 @@
+use std::num::ParseIntError;
+
 use config::ConfigError;
 use quinn::{ConnectionError, ReadExactError, ReadToEndError, WriteError};
 use thiserror::Error;
@@ -45,10 +47,21 @@ impl std::fmt::Display for SizeMismatchError
 }
 
 #[derive(Debug, Error)]
+pub enum SessionError
+{
+    #[error("Could not find session ID")]
+    NotFound,
+    #[error(transparent)]
+    Parse(#[from] ParseIntError),
+}
+
+#[derive(Debug, Error)]
 pub enum QueueError
 {
     #[error(transparent)]
     Config(#[from] ConfigError),
+    #[error(transparent)]
+    Session(#[from] SessionError),
     #[error(transparent)]
     IO(#[from] std::io::Error),
 }
@@ -77,6 +90,9 @@ pub enum ServerError
     FromPrimitive(#[from] FromPrimitiveError),
     #[error(transparent)]
     SizeMismatch(#[from] SizeMismatchError),
+    #[cfg(feature = "sessions")]
+    #[error("Session ID does not match")]
+    SessionMismatch,
     #[cfg(feature = "signing")]
     #[error("Signature verification failed")]
     SignatureVerification,

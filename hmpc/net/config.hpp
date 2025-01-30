@@ -76,5 +76,11 @@ namespace hmpc::net
         {
             return config{hmpc::ffi::hmpc_ffi_net_config_read_env(path.c_str())};
         }
+
+        /// Update the session ID of a config to values set by environment variables (if possible)
+        bool session_from_env()
+        {
+            return hmpc::ffi::hmpc_ffi_net_config_session_from_env(handle.get());
+        }
     };
 }

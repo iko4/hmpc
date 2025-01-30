@@ -20,3 +20,5 @@ parties:
   22: localhost:6002
   23: localhost:6003
 port: 5000
+session:
+  string: hmpc-rs tests

@@ -5,6 +5,8 @@ use log::{debug, info};
 use quinn::crypto::rustls::QuicClientConfig;
 use quinn::{Connection, TransportConfig};
 
+#[cfg(feature = "sessions")]
+use super::SessionID;
 #[cfg(feature = "signing")]
 use super::sign::PrivateKey;
 use super::config::DEFAULT_TIMEOUT;
@@ -41,7 +43,7 @@ async fn connect_client(client: &quinn::Endpoint, id: PartyID, config: &Config) 
     client.connect(make_addr(id, config), config.name(id)).unwrap().await.unwrap()
 }
 
-async fn handle_connection(id: PartyID, #[cfg(feature = "signing")] signing_key: Arc<PrivateKey>, connection: Connection, message: SendMessage, answer_channel: tokio::sync::oneshot::Sender<Result<(), ClientError>>)
+async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: SessionID, #[cfg(feature = "signing")] signing_key: Arc<PrivateKey>, connection: Connection, message: SendMessage, answer_channel: tokio::sync::oneshot::Sender<Result<(), ClientError>>)
 {
     debug!("[Party {}] Outgoing stream: to {}", id, connection.remote_address());
     let mut stream = match connection.open_uni().await
@@ -54,7 +56,11 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "signing")] signing_key:
         },
     };
     info!("[Party {}] Outgoing stream: to {} established", id, connection.remote_address());
-    if let Err(e) = message.write_to(#[cfg(feature = "signing")] &signing_key, &mut stream).await
+    if let Err(e) = message.write_to(
+        #[cfg(feature = "sessions")] session,
+        #[cfg(feature = "signing")] &signing_key,
+        &mut stream
+    ).await
     {
         answer_channel.send(Err(ClientError::Write(e))).unwrap();
         return;
@@ -68,10 +74,13 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "signing")] signing_key:
     answer_channel.send(Ok(())).unwrap();
 }
 
-pub(crate) async fn run_client(id: PartyID, config: Config, mut receive_channel: tokio::sync::mpsc::Receiver<NetCommand>)
+pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio::sync::mpsc::Receiver<NetCommand>)
 {
     let mut outgoing = std::collections::HashMap::<PartyID, quinn::Connection>::new();
     let endpoint = make_client(&config).await;
+    // PANICS: Calling code checks that config.session is not None and contains a value
+    #[cfg(feature = "sessions")]
+    let session = config.session.clone().unwrap().unwrap();
     #[cfg(feature = "signing")]
     let signing_key = Arc::new(config.signing_key(id).await.unwrap());
 
@@ -97,7 +106,16 @@ pub(crate) async fn run_client(id: PartyID, config: Config, mut receive_channel:
                         entry.insert(connection).clone()
                     },
                 };
-                tokio::spawn(handle_connection(id, #[cfg(feature = "signing")] signing_key.clone(), connection, message, answer_channel));
+                tokio::spawn(
+                    handle_connection(
+                        id,
+                        #[cfg(feature = "sessions")] session,
+                        #[cfg(feature = "signing")] signing_key.clone(),
+                        connection,
+                        message,
+                        answer_channel
+                    )
+                );
             },
         }
     }

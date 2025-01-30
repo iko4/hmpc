@@ -1,9 +1,9 @@
 use std::ffi::{c_char, CStr};
 
-use log::{debug, error};
+use log::{debug, error, warn};
 
-use crate::ffi::{check_pointer, free_nullable, nullable};
-use crate::net::config::Config;
+use crate::ffi::{check_mut_pointer, check_pointer, free_nullable, nullable};
+use crate::net::config::{Config, Session};
 use crate::net::ptr::Nullable;
 
 macro_rules! path_from_string
@@ -81,6 +81,36 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_read_env(config: *const c_char) -> 
             error!("Reading config failed: {e:?}");
             None
         },
+    }
+}
+
+/// Update the session ID of a config to values set by environment variables (if possible)
+///
+/// Returns `true` if some value is set by an environment variable, `false` otherwise.
+///
+/// # Safety
+/// The `config` pointer has to be valid. (The function only checks for `nullptr`.)
+#[no_mangle]
+pub unsafe extern "C" fn hmpc_ffi_net_config_session_from_env(config: Nullable<Config>) -> bool
+{
+    debug!("Trying to read session ID from environment variable");
+
+    #[cfg(not(feature = "sessions"))]
+    warn!("The \"sessions\" feature is not enabled");
+
+    if let Some(session) = Session::try_from_env()
+    {
+        check_mut_pointer!(config, false);
+
+        let config = unsafe { config.as_mut() };
+
+        config.session.replace(session);
+
+        true
+    }
+    else
+    {
+        false
     }
 }
 

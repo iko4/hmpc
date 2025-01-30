@@ -29,16 +29,16 @@ macro_rules! check_pointer
     };
 }
 
-macro_rules! check_handle
+macro_rules! check_mut_pointer
 {
-    ($id:ident) =>
+    ($id:ident $(, $result:expr)?) =>
     {
         let Some(mut $id) = $id
         else
         {
             const NAME: &str = stringify!($id);
             error!("{NAME} pointer is null");
-            return SendReceiveErrc::InvalidHandle;
+            return $($result)?;
         };
     };
 }
@@ -116,7 +116,7 @@ macro_rules! free_nullable
     };
 }
 
-pub(crate) use {check_communicator, check_handle, check_non_null_vec, check_pointer, check_size_eq, check_span, check_vec, free_nullable};
+pub(crate) use {check_communicator, check_mut_pointer, check_pointer, check_non_null_vec, check_size_eq, check_span, check_vec, free_nullable};
 
 fn set_logger()
 {

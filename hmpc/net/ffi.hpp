@@ -75,6 +75,8 @@ namespace hmpc::ffi
                 throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "task panicked");
             case SendReceiveErrc::multiple_errors:
                 throw std::runtime_error("multiple errors");
+            case SendReceiveErrc::session_mismatch:
+                throw std::runtime_error("session ID mismatch");
             case SendReceiveErrc::signature_verification:
                 throw std::runtime_error("signature verification failed");
             case SendReceiveErrc::unknown_sender:

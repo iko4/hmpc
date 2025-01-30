@@ -92,6 +92,7 @@ pub enum ReceiveErrc
     StreamTooLong,
     InvalidEnumValue,
     SizeMismatch,
+    SessionMismatch,
     SignatureVerification,
     UnknownSender,
 }
@@ -151,6 +152,8 @@ impl From<ReceiveError> for ReceiveErrc
             },
             ReceiveError::Server(ServerError::FromPrimitive(_)) => Self::InvalidEnumValue,
             ReceiveError::Server(ServerError::SizeMismatch(_)) => Self::SizeMismatch,
+            #[cfg(feature = "sessions")]
+            ReceiveError::Server(ServerError::SessionMismatch) => Self::SessionMismatch,
             #[cfg(feature = "signing")]
             ReceiveError::Server(ServerError::SignatureVerification) => Self::SignatureVerification,
             #[cfg(feature = "signing")]
@@ -194,6 +197,7 @@ pub enum SendReceiveErrc
     TaskCancelled,
     TaskPanicked,
     MultipleErrors,
+    SessionMismatch,
     SignatureVerification,
     UnknownSender,
 }
@@ -254,6 +258,7 @@ impl From<ReceiveErrc> for SendReceiveErrc
             ReceiveErrc::StreamTooLong => Self::StreamTooLong,
             ReceiveErrc::InvalidEnumValue => Self::InvalidEnumValue,
             ReceiveErrc::SizeMismatch => Self::SizeMismatch,
+            ReceiveErrc::SessionMismatch => Self::SessionMismatch,
             ReceiveErrc::SignatureVerification => Self::SignatureVerification,
             ReceiveErrc::UnknownSender => Self::UnknownSender,
         }

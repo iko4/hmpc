@@ -3,8 +3,6 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::mem::size_of;
 use std::net::{SocketAddr, ToSocketAddrs};
-#[cfg(feature = "signing")]
-use std::sync::Arc;
 
 use log::info;
 use quinn::{RecvStream, SendStream, WriteError};
@@ -26,6 +24,7 @@ use self::sign::{PrivateKey, PublicKey};
 use self::errors::{ClientError, FromPrimitiveError, ServerError};
 pub use self::queue::Queue;
 
+const SESSION_ID_SIZE: usize = 128 / 8; // 128 bit => [u8; 16]
 
 #[cfg(feature = "signing")]
 const SIGNATURE_SIZE: usize = 64; // see https://ed25519.cr.yp.to/
@@ -144,7 +143,8 @@ pub type MessageDatatype = u16;
 pub type MessageID = u64;
 pub type MessageSize = u64;
 pub type OwnedData = Vec<u8>;
-
+pub type SessionID = u128;
+const _: () = assert!(SESSION_ID_SIZE == size_of::<SessionID>());
 
 type Communicator = BTreeSet<PartyID>;
 
@@ -157,7 +157,7 @@ pub struct SendMessage
 impl SendMessage
 {
     #[cfg(feature = "signing")]
-    async fn write_to(self, signing_key: &PrivateKey, stream: &mut SendStream) -> Result<(), WriteError>
+    async fn write_to(self, #[cfg(feature = "sessions")] session: SessionID, signing_key: &PrivateKey, stream: &mut SendStream) -> Result<(), WriteError>
     {
         let message =
         [
@@ -168,6 +168,8 @@ impl SendMessage
             self.metadata.sender.to_le_bytes().as_slice(),
             self.metadata.receiver.to_le_bytes().as_slice(),
             self.metadata.id.to_le_bytes().as_slice(),
+            #[cfg(feature = "sessions")]
+            session.to_le_bytes().as_slice(),
             self.metadata.data_as_slice(&self.data),
         ].concat();
 
@@ -181,7 +183,7 @@ impl SendMessage
     }
 
     #[cfg(not(feature = "signing"))]
-    async fn write_to(self, stream: &mut SendStream) -> Result<(), WriteError>
+    async fn write_to(self, #[cfg(feature = "sessions")] session: SessionID, stream: &mut SendStream) -> Result<(), WriteError>
     {
         stream.write_all(MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice()).await?;
         stream.write_all(MESSAGE_FEATURE_FLAGS.to_le_bytes().as_slice()).await?;
@@ -190,6 +192,8 @@ impl SendMessage
         stream.write_all(self.metadata.sender.to_le_bytes().as_slice()).await?;
         stream.write_all(self.metadata.receiver.to_le_bytes().as_slice()).await?;
         stream.write_all(self.metadata.id.to_le_bytes().as_slice()).await?;
+        #[cfg(feature = "sessions")]
+        stream.write_all(session.to_le_bytes().as_slice()).await?;
         stream.write_all(self.metadata.data_as_slice(&self.data)).await
     }
 }
@@ -208,7 +212,7 @@ impl ReceiveMessage
         Self { metadata: metadata::Message::new(message_kind, datatype, sender, receiver, message_id, data.len() as MessageSize), data }
     }
 
-    fn build_from(message: &[u8]) -> Result<Self, ServerError>
+    fn build_from(#[cfg(feature = "sessions")] session: SessionID, message: &[u8]) -> Result<Self, ServerError>
     {
         const MESSAGE_FORMAT_VERSION_SIZE: usize = size_of::<MessageFormat>();
         const MESSAGE_FEATURE_FLAGS_SIZE: usize = size_of::<MessageFlags>();
@@ -258,13 +262,25 @@ impl ReceiveMessage
             .ok_or(too_short(message))?;
         let message_id = MessageID::from_le_bytes(*message_id);
 
+        #[cfg(feature = "sessions")]
+        let (message_session, message) = message.split_first_chunk::<SESSION_ID_SIZE>()
+            .ok_or(too_short(message))?;
+        #[cfg(feature = "sessions")]
+        {
+            let message_session = SessionID::from_le_bytes(*message_session);
+            if message_session != session
+            {
+                return Err(ServerError::SessionMismatch);
+            }
+        }
+
         let data = message.into();
 
         Ok(Self::new(message_kind, datatype, sender, receiver, message_id, data))
     }
 
     #[cfg(feature = "signing")]
-    async fn read_from(verification_keys: &HashMap<PartyID, PublicKey>, stream: &mut RecvStream) -> Result<Self, ServerError>
+    async fn read_from(#[cfg(feature = "sessions")] session: SessionID, verification_keys: &HashMap<PartyID, PublicKey>, stream: &mut RecvStream) -> Result<Self, ServerError>
     {
         let full_message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
         let full_message = full_message.as_slice();
@@ -272,7 +288,7 @@ impl ReceiveMessage
         let (message, signature) = full_message.split_last_chunk::<SIGNATURE_SIZE>()
             .ok_or(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(full_message.len())))?;
 
-        let result = Self::build_from(message)?;
+        let result = Self::build_from(#[cfg(feature = "sessions")] session, message)?;
 
         verification_keys.get(&result.metadata.sender)
             .map_or(Err(ServerError::UnknownSender), Ok)?
@@ -283,11 +299,11 @@ impl ReceiveMessage
     }
 
     #[cfg(not(feature = "signing"))]
-    async fn read_from(stream: &mut RecvStream) -> Result<Self, ServerError>
+    async fn read_from(#[cfg(feature = "sessions")] session: SessionID, stream: &mut RecvStream) -> Result<Self, ServerError>
     {
         let message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
 
-        Self::build_from(message.as_slice())
+        Self::build_from(#[cfg(feature = "sessions")] session, message.as_slice())
     }
 }
 
