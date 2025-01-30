@@ -116,12 +116,8 @@ namespace hmpc::net
                 static_assert(std::numeric_limits<value_type>::digits > 0);
                 static_assert(std::numeric_limits<value_type>::is_integer);
                 static_assert(not std::numeric_limits<value_type>::is_signed);
-                static_assert(bit_tag >> (std::numeric_limits<value_type>::digits - 1) == value_type{}); // check that there is at least one bit unused
 
-                auto result = value_type{is_little_endian};
-                result <<= (std::numeric_limits<value_type>::digits - 1);
-                result |= bit_tag;
-                return result;
+                return value_type{is_little_endian} | bit_tag;
             }();
         };
 

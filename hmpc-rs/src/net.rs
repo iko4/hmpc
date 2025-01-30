@@ -101,45 +101,45 @@ pub enum MessageKind
     AllToAll = 6,
 }
 
-type MessageDatatypeUnderlying = u8;
+type MessageKindUnderlying = u8;
 
-impl TryFrom<MessageDatatypeUnderlying> for MessageKind
+impl TryFrom<MessageKindUnderlying> for MessageKind
 {
     type Error = FromPrimitiveError;
 
-    fn try_from(value: MessageDatatypeUnderlying) -> Result<Self, Self::Error>
+    fn try_from(value: MessageKindUnderlying) -> Result<Self, Self::Error>
     {
         match value
         {
-            x if x == MessageKind::Send as MessageDatatypeUnderlying => Ok(MessageKind::Send),
-            x if x == MessageKind::Broadcast as MessageDatatypeUnderlying => Ok(MessageKind::Broadcast),
-            x if x == MessageKind::Scatter as MessageDatatypeUnderlying => Ok(MessageKind::Scatter),
-            x if x == MessageKind::Gather as MessageDatatypeUnderlying => Ok(MessageKind::Gather),
-            x if x == MessageKind::AllGather as MessageDatatypeUnderlying => Ok(MessageKind::AllGather),
-            x if x == MessageKind::AllToAll as MessageDatatypeUnderlying => Ok(MessageKind::AllToAll),
+            x if x == MessageKind::Send as MessageKindUnderlying => Ok(MessageKind::Send),
+            x if x == MessageKind::Broadcast as MessageKindUnderlying => Ok(MessageKind::Broadcast),
+            x if x == MessageKind::Scatter as MessageKindUnderlying => Ok(MessageKind::Scatter),
+            x if x == MessageKind::Gather as MessageKindUnderlying => Ok(MessageKind::Gather),
+            x if x == MessageKind::AllGather as MessageKindUnderlying => Ok(MessageKind::AllGather),
+            x if x == MessageKind::AllToAll as MessageKindUnderlying => Ok(MessageKind::AllToAll),
             x => Err(FromPrimitiveError::FromU8(x)),
         }
     }
 }
 impl MessageKind
 {
-    const BYTE_SIZE: usize = size_of::<MessageDatatypeUnderlying>();
+    const BYTE_SIZE: usize = size_of::<MessageKindUnderlying>();
 
     fn to_le_bytes(self) -> [u8; Self::BYTE_SIZE]
     {
-        (self as MessageDatatypeUnderlying).to_le_bytes()
+        (self as MessageKindUnderlying).to_le_bytes()
     }
 
     fn try_from_le_bytes(bytes: [u8; Self::BYTE_SIZE]) -> Result<Self, FromPrimitiveError>
     {
-        let value = MessageDatatypeUnderlying::from_le_bytes(bytes);
+        let value = MessageKindUnderlying::from_le_bytes(bytes);
         value.try_into()
     }
 }
 
 pub type MessageFormat = u8;
 pub type MessageFlags = u8;
-pub type MessageDatatype = u16;
+pub type MessageDatatype = u8;
 pub type MessageID = u64;
 pub type MessageSize = u64;
 pub type OwnedData = Vec<u8>;
