@@ -5,6 +5,8 @@ An HPC-inspired MPC library.
 This work is a work in progress and an academic prototype.
 As such, some features are still missing (e.g., an MPC API built on lower-level primitives) and it is not meant to be used in production environments.
 
+See the [docs](docs/README.md) for documentation on concepts and the general library design.
+
 ## Preparing a Build Environment 🧰
 
 We tested the following containerized build environments for our software:

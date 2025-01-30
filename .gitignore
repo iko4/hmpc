@@ -6,7 +6,6 @@ CMakeUserPresets.json
 
 # Build files
 build*
-docs
 reports*
 
 # Runtime files

@@ -109,11 +109,11 @@ target_link_options(mpspdz-bgv PRIVATE ${OpenMP_CXX_FLAGS})
 list(APPEND HMPC_EXAMPLE_TARGETS mpspdz-fma mpspdz-ntt mpspdz-bgv)
 
 add_custom_target(fma-comparison-make_directory
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/docs/examples/fma
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/reports/examples/fma
     VERBATIM
 )
 add_custom_target(bgv-comparison-make_directory
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/docs/examples/bgv
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/reports/examples/bgv
     VERBATIM
 )
 if (HMPC_ENABLE_CUDA)
@@ -121,21 +121,21 @@ if (HMPC_ENABLE_CUDA)
         DEPENDS fma-comparison-make_directory mpspdz-fma fma
         COMMAND python3 ${PROJECT_SOURCE_DIR}/examples/fma.py 8192,16384,32768,65536,131072,262144,524288,1048576,2097152,4194304,8388608,16777216,33554432,67108864,134217728 1,2,4,0 $<TARGET_FILE:fma> $<TARGET_FILE:mpspdz-fma> --time_per_item --log_log=2 "--legend=('ours','MP-SPDZ')" --repeats=11
         COMMAND python3 ${PROJECT_SOURCE_DIR}/examples/fma.py 8192,16384,32768,65536,131072,262144,524288,1048576,2097152,4194304,8388608,16777216,33554432,67108864,134217728 -1 $<TARGET_FILE:fma> --time_per_item --log_log=2 "--legend=('ours (GPU)',)" --plot="comparison-gpu.pdf" --data="comparison-gpu.json" --repeats=11
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/docs/examples/fma
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/reports/examples/fma
         VERBATIM
     )
 else()
     add_custom_target(fma-comparison
         DEPENDS fma-comparison-make_directory mpspdz-fma fma
         COMMAND python3 ${PROJECT_SOURCE_DIR}/examples/fma.py 8192,16384,32768,65536,131072,262144,524288,1048576,2097152,4194304,8388608,16777216,33554432,67108864,134217728 1,2,4,0 $<TARGET_FILE:fma> $<TARGET_FILE:mpspdz-fma> --time_per_item --log_log=2 "--legend=('ours','MP-SPDZ')" --repeats=11
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/docs/examples/fma
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/reports/examples/fma
         VERBATIM
     )
 endif()
 add_custom_target(bgv-comparison
     DEPENDS bgv-comparison-make_directory mpspdz-bgv bgv
     COMMAND python3 ${PROJECT_SOURCE_DIR}/examples/fma.py 100,200,300,400,500,750,1000,1500,2000,2500,3000,4000 1,0 $<TARGET_FILE:bgv> $<TARGET_FILE:mpspdz-bgv> --time_per_item --log_log=2 "--legend=('ours','MP-SPDZ')" --repeats=11
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/docs/examples/bgv
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/reports/examples/bgv
     VERBATIM
 )
 
