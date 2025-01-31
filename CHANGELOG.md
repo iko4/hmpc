@@ -4,7 +4,9 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## Unreleased
 
---
+### Fixed
+
+- Missing session feature (cmake)
 
 
 ## Version 0.5.0 - 2025-01-30

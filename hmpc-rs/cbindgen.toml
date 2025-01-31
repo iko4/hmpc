@@ -32,5 +32,6 @@ friend constexpr bool operator==(NetworkStatistics const&, NetworkStatistics con
 "AllToAll" = "AllToAllMetadata"
 
 [defines]
-"feature = statistics" = "HMPC_ENABLE_STATISTICS"
+"feature = sessions" = "HMPC_ENABLE_SESSIONS"
 "feature = signing" = "HMPC_ENABLE_SIGNING"
+"feature = statistics" = "HMPC_ENABLE_STATISTICS"

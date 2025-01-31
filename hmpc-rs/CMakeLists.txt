@@ -21,11 +21,14 @@ hmpc_rs_set_paths($<CONFIG> HMPC_RS_LIB)
 
 include(ExternalProject)
 
-if (HMPC_ENABLE_STATISTICS)
-    list(APPEND HMPC_RS_FEATURES "statistics")
+if (HMPC_ENABLE_SESSIONS)
+    list(APPEND HMPC_RS_FEATURES "sessions")
 endif()
 if (HMPC_ENABLE_SIGNING)
     list(APPEND HMPC_RS_FEATURES "signing")
+endif()
+if (HMPC_ENABLE_STATISTICS)
+    list(APPEND HMPC_RS_FEATURES "statistics")
 endif()
 
 if (HMPC_RS_FEATURES)

@@ -10,8 +10,9 @@ option(HMPC_TEST_EXAMPLES "Test if examples run" ON)
 option(HMPC_TIDY "Add clang-tidy targets" OFF)
 
 option(HMPC_ENABLE_CUDA "Add CUDA support" OFF)
-option(HMPC_ENABLE_STATISTICS "Enable statistics, e.g., for networking" ON)
+option(HMPC_ENABLE_SESSIONS "Enable sessions" ON)
 option(HMPC_ENABLE_SIGNING "Enable signing of messages" ON)
+option(HMPC_ENABLE_STATISTICS "Enable statistics, e.g., for networking" ON)
 
 set(HMPC_DEVICE_TARGETS "spir64_x86_64" CACHE STRING "SYCL targets (comma separated; for example: spir64,spir64_x86_64,native_cpu)")
 
@@ -19,7 +20,7 @@ message("HMPC: Build:\n - CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}\n - CMAKE_CONFIG
 message("HMPC: Build tests:\n - library tests: ${HMPC_BUILD_TESTING}\n - code coverage for tests: ${HMPC_TEST_COVERAGE}")
 message("HMPC: Build examples:\n - any examples: ${HMPC_BUILD_EXAMPLES}\n - external examples: ${HMPC_BUILD_EXTERNAL_EXAMPLES}\n - test examples: ${HMPC_TEST_EXAMPLES}")
 message("HMPC: Tidy:\n - adding tidy targets: ${HMPC_TIDY}")
-message("HMPC: Features:\n - CUDA: ${HMPC_ENABLE_CUDA}\n - statistics: ${HMPC_ENABLE_STATISTICS}\n - signing: ${HMPC_ENABLE_SIGNING}")
+message("HMPC: Features:\n - CUDA: ${HMPC_ENABLE_CUDA}\n - sessions: ${HMPC_ENABLE_SESSIONS}\n - signing: ${HMPC_ENABLE_SIGNING}\n - statistics: ${HMPC_ENABLE_STATISTICS}")
 if (HMPC_ENABLE_CUDA)
     set(HMPC_DEVICE_TARGETS "${HMPC_DEVICE_TARGETS},nvptx64-nvidia-cuda")
     set(HMPC_CUDA_ARCH "sm_70" CACHE STRING "CUDA architecture. \"sm_50\" is the lowest supportet value. V100 supports \"sm_70\". A100 supports \"sm_80\".")
@@ -39,14 +40,19 @@ set(CMAKE_CXX_STANDARD 26)
 add_library(hmpc INTERFACE)
 target_include_directories(hmpc INTERFACE .)
 # target_compile_features(hmpc INTERFACE cxx_std_26)
-if (HMPC_ENABLE_STATISTICS)
+if (HMPC_ENABLE_SESSIONS)
     target_compile_definitions(hmpc INTERFACE
-        HMPC_ENABLE_STATISTICS=1
+        HMPC_ENABLE_SESSIONS=1
     )
 endif()
 if (HMPC_ENABLE_SIGNING)
     target_compile_definitions(hmpc INTERFACE
         HMPC_ENABLE_SIGNING=1
+    )
+endif()
+if (HMPC_ENABLE_STATISTICS)
+    target_compile_definitions(hmpc INTERFACE
+        HMPC_ENABLE_STATISTICS=1
     )
 endif()
 target_compile_options(hmpc INTERFACE -Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fsycl -fsycl-targets=${HMPC_DEVICE_TARGETS} -fconstexpr-steps=999999999)
