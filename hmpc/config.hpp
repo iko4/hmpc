@@ -21,7 +21,7 @@
     #include <source_location>
     #include <stdexcept>
     #define HMPC_NOEXCEPT
-    #define HMPC_ASSERT(check) (hmpc::detail::boolify(check)) ? static_cast<void>(0) : []() { constexpr auto location = std::source_location::current(); throw std::runtime_error(HMPC_FMTLIB::format("{}:{}:\n" "  Assertion failed: {}\n  in function: {}", location.file_name(), location.line(), #check, location.function_name())); }()
+    #define HMPC_ASSERT(check) (hmpc::bool_cast(check)) ? static_cast<void>(0) : []() { constexpr auto location = std::source_location::current(); throw std::runtime_error(HMPC_FMTLIB::format("{}:{}:\n" "  Assertion failed: {}\n  in function: {}", location.file_name(), location.line(), #check, location.function_name())); }()
 #else
     #define HMPC_NOEXCEPT noexcept(true)
     #define HMPC_ASSERT(...) static_cast<void>(0)
@@ -38,7 +38,7 @@
 #endif
 
 #if HMPC_ASSERT_LEVEL > 1
-    #define HMPC_DEVICE_ASSERT(check) assert(hmpc::detail::boolify(check) && #check)
+    #define HMPC_DEVICE_ASSERT(check) assert(hmpc::bool_cast(check) && #check)
     #define HMPC_DEVICE_NOEXCEPT
 #else
     #define HMPC_DEVICE_ASSERT(check) static_cast<void>(0)
@@ -71,6 +71,12 @@ namespace hmpc
 
     using default_limb = core::uint<std::uint32_t>;
     using bit = core::uint<bool>;
+
+    constexpr bool bool_cast(bit value) noexcept;
+    constexpr bool bool_cast(bool value) noexcept
+    {
+        return value;
+    }
 
     namespace crypto
     {

@@ -12,28 +12,12 @@ namespace hmpc
     {
         if constexpr (hmpc::is_constant<Value>)
         {
-            static_assert(value.value);
+            static_assert(hmpc::bool_cast(value.value));
             return;
         }
         else
         {
-            return (value) ? static_cast<void>(0) : throw hmpc::compiletime_error();
-        }
-    }
-
-    namespace detail
-    {
-        template<typename Value>
-        constexpr bool boolify(Value value) HMPC_NOEXCEPT
-        {
-            if constexpr (hmpc::is_constant<Value>)
-            {
-                return static_cast<bool>(value.value);
-            }
-            else
-            {
-                return static_cast<bool>(value);
-            }
+            return hmpc::bool_cast(value) ? static_cast<void>(0) : throw hmpc::compiletime_error();
         }
     }
 }

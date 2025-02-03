@@ -4,6 +4,10 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## Unreleased
 
+### Added
+
+- `bool_cast` to explicitly convert values to booleans
+
 ### Fixed
 
 - Missing session feature (cmake)

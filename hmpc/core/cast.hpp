@@ -16,4 +16,10 @@ namespace hmpc::core
             return static_cast<To>(from);
         }
     }
+
+    template<hmpc::is_constant From>
+    constexpr auto bool_cast(From from) noexcept
+    {
+        return hmpc::bool_constant_of<hmpc::bool_cast(from.value)>;
+    }
 }

@@ -282,6 +282,11 @@ namespace hmpc::core
         }
     };
 
+    constexpr bool bool_cast(uint<bool> bit) noexcept
+    {
+        return bit.data;
+    }
+
     template<typename Underlying>
     struct uint
     {
@@ -361,6 +366,11 @@ namespace hmpc
     using bit_constant = constant<bit, Bit>;
     template<bit Bit>
     constexpr bit_constant<Bit> bit_constant_of = {};
+
+    constexpr bool bool_cast(bit value) noexcept
+    {
+        return hmpc::core::bool_cast(value);
+    }
 }
 
 #undef HMPC_COMPARISON_OPERATOR
