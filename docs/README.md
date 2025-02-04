@@ -2,4 +2,5 @@
 
 See the subsections for documentation on
 
-- [networking](net/README.md)
+- [networking](networking.md)
+- [optional features](features.md)
