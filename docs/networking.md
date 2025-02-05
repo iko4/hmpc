@@ -388,3 +388,5 @@ In other words, the receiver can show the message to somebody else, in case the 
 
 All other (meta)data (except the signature itself) is signed to create the signature.
 When verifying the signature, the sender ID is used to determine which verification key to use.
+
+Note: The data is first hashed and then signed together with all metadata.

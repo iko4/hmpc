@@ -14,6 +14,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 
 - Message ID for non-extended operations changed: Use same communicator for receivers as for senders.
 - Message ID counter per message kind/datatype.
+- Data is hashed independently of all other metadata for signatures.
 
 ### Fixed
 

@@ -23,6 +23,7 @@ pub use self::config::Config;
 #[cfg(feature = "signing")]
 use self::sign::{PrivateKey, PublicKey};
 use self::errors::{ClientError, FromPrimitiveError, ServerError};
+use self::hash::hash;
 pub use self::queue::Queue;
 
 const SESSION_ID_SIZE: usize = 128 / 8; // 128 bit => [u8; 16]
@@ -157,35 +158,30 @@ pub struct SendMessage
 }
 impl SendMessage
 {
-    #[cfg(feature = "signing")]
-    async fn write_to(self, #[cfg(feature = "sessions")] session: SessionID, signing_key: &PrivateKey, stream: &mut SendStream) -> Result<(), WriteError>
+    async fn write_to(self, #[cfg(feature = "sessions")] session: SessionID, #[cfg(feature = "signing")] signing_key: &PrivateKey, stream: &mut SendStream) -> Result<(), WriteError>
     {
-        let message =
-        [
-            MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice(),
-            MESSAGE_FEATURE_FLAGS.to_le_bytes().as_slice(),
-            self.metadata.kind.to_le_bytes().as_slice(),
-            self.metadata.datatype.to_le_bytes().as_slice(),
-            self.metadata.sender.to_le_bytes().as_slice(),
-            self.metadata.receiver.to_le_bytes().as_slice(),
-            self.metadata.id.to_le_bytes().as_slice(),
-            #[cfg(feature = "sessions")]
-            session.to_le_bytes().as_slice(),
-            self.metadata.data_as_slice(&self.data),
-        ].concat();
+        let data = self.metadata.data_as_slice(&self.data);
 
-        let signature = signing_key.sign(&message);
-        let signature = signature.as_ref();
+        #[cfg(feature = "signing")]
+        let signature =
+        {
+            let metadata =
+            [
+                MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice(),
+                MESSAGE_FEATURE_FLAGS.to_le_bytes().as_slice(),
+                self.metadata.kind.to_le_bytes().as_slice(),
+                self.metadata.datatype.to_le_bytes().as_slice(),
+                self.metadata.sender.to_le_bytes().as_slice(),
+                self.metadata.receiver.to_le_bytes().as_slice(),
+                self.metadata.id.to_le_bytes().as_slice(),
+                #[cfg(feature = "sessions")]
+                session.to_le_bytes().as_slice(),
+                hash(data).as_ref(),
+            ].concat();
 
-        assert_eq!(signature.len(), SIGNATURE_SIZE);
+            signing_key.sign(&metadata)
+        };
 
-        stream.write_all(&message).await?;
-        stream.write_all(signature).await
-    }
-
-    #[cfg(not(feature = "signing"))]
-    async fn write_to(self, #[cfg(feature = "sessions")] session: SessionID, stream: &mut SendStream) -> Result<(), WriteError>
-    {
         stream.write_all(MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice()).await?;
         stream.write_all(MESSAGE_FEATURE_FLAGS.to_le_bytes().as_slice()).await?;
         stream.write_all(self.metadata.kind.to_le_bytes().as_slice()).await?;
@@ -195,7 +191,17 @@ impl SendMessage
         stream.write_all(self.metadata.id.to_le_bytes().as_slice()).await?;
         #[cfg(feature = "sessions")]
         stream.write_all(session.to_le_bytes().as_slice()).await?;
-        stream.write_all(self.metadata.data_as_slice(&self.data)).await
+        stream.write_all(data).await?;
+
+        #[cfg(feature = "signing")]
+        {
+            let signature = signature.as_ref();
+            assert_eq!(signature.len(), SIGNATURE_SIZE);
+
+            stream.write_all(signature).await?;
+        }
+
+        Ok(())
     }
 }
 unsafe impl Send for SendMessage {}
@@ -290,10 +296,23 @@ impl ReceiveMessage
             .ok_or(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(full_message.len())))?;
 
         let result = Self::build_from(#[cfg(feature = "sessions")] session, message)?;
+        let metadata =
+        [
+            MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice(),
+            MESSAGE_FEATURE_FLAGS.to_le_bytes().as_slice(),
+            result.metadata.kind.to_le_bytes().as_slice(),
+            result.metadata.datatype.to_le_bytes().as_slice(),
+            result.metadata.sender.to_le_bytes().as_slice(),
+            result.metadata.receiver.to_le_bytes().as_slice(),
+            result.metadata.id.to_le_bytes().as_slice(),
+            #[cfg(feature = "sessions")]
+            session.to_le_bytes().as_slice(),
+            hash(result.data.as_ref()).as_ref(),
+        ].concat();
 
         verification_keys.get(&result.metadata.sender)
             .map_or(Err(ServerError::UnknownSender), Ok)?
-            .verify(message, signature)
+            .verify(&metadata, signature)
             .or(Err(ServerError::SignatureVerification))?;
 
         Ok(result)
