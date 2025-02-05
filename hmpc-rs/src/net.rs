@@ -10,6 +10,7 @@ use quinn::{RecvStream, SendStream, WriteError};
 mod client;
 pub mod config;
 pub(crate) mod errors;
+pub(crate) mod hash;
 mod message_buffer;
 pub mod metadata;
 #[cfg(feature = "signing")]

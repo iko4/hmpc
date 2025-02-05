@@ -14,6 +14,7 @@ use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use thiserror::Error;
 
+use super::hash::hash;
 #[cfg(feature = "signing")]
 use super::sign::{PublicKey, PrivateKey};
 use super::{PartyID, SessionID, SESSION_ID_SIZE};
@@ -184,11 +185,7 @@ impl Session
             },
             Session::String(s) =>
             {
-                let mut sha = ring::digest::Context::new(&ring::digest::SHA256);
-
-                sha.update(s.as_bytes());
-
-                let digest = sha.finish();
+                let digest = hash(s.as_bytes());
                 let digest = digest.as_ref();
 
                 assert!(digest.len() >= SESSION_ID_SIZE);
