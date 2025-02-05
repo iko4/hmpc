@@ -13,6 +13,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 ### Changed
 
 - Message ID for non-extended operations changed: Use same communicator for receivers as for senders.
+- Message ID counter per message kind/datatype.
 
 ### Fixed
 

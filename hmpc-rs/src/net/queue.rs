@@ -10,7 +10,7 @@ use super::config::CHANNEL_CAPACITY;
 use super::errors::{QueueError, ReceiveError, SendError, SendReceiveError, ServerError, SizeMismatchError};
 use super::metadata::{self, AllGather, AllToAll, BaseMessageID, Broadcast, Gather, ToMessage};
 use super::ptr::{NonNullData, ReadData, WriteData};
-use super::{client, message_buffer, server, Communicator, Config, DataCommand, MessageID, MessageSize, NetCommand, PartyID, SendMessage};
+use super::{client, message_buffer, server, Communicator, Config, DataCommand, MessageDatatype, MessageID, MessageKind, MessageSize, NetCommand, PartyID, SendMessage};
 use crate::vec::Vec2d;
 
 #[derive(Debug, Clone, Copy)]
@@ -88,51 +88,29 @@ where
 
 type CounterKey = [u8; ring::digest::SHA256_OUTPUT_LEN];
 
-fn hash_communicator(communicator: &Communicator, hash: &mut ring::digest::Context)
-{
-    let len = communicator.len() as u64;
-    hash.update(len.to_le_bytes().as_slice());
-    for party in communicator
-    {
-        hash.update(party.to_le_bytes().as_slice());
-    }
-}
-
-fn hash_message<Message: BaseMessageID>(message: Message, hash: &mut ring::digest::Context)
-{
-    hash.update(Message::KIND.to_le_bytes().as_slice());
-    message.hash(hash);
-}
-
-fn finish_hash(hash: ring::digest::Context) -> CounterKey
-{
-    // PANICS: Should be fine because we use a buffer of the right size
-    hash.finish().as_ref().try_into().unwrap()
-}
-
 #[derive(Debug)]
 struct QueueState
 {
     id: PartyID,
     data_channel: tokio::sync::mpsc::Sender<DataCommand>,
     net_channel: tokio::sync::mpsc::Sender<NetCommand>,
-    counters: HashMap<CounterKey, MessageID>,
+    counters: HashMap<(MessageKind, MessageDatatype, CounterKey), MessageID>,
     #[cfg(feature = "statistics")]
     network_statistics: NetworkStatistics,
 }
 
 impl QueueState
 {
-    fn update_counter(&mut self, key: CounterKey) -> MessageID
+    fn update_counter(&mut self, kind: MessageKind, datatype: MessageDatatype, key: CounterKey) -> MessageID
     {
         const MESSAGE_ID_SIZE: usize = size_of::<MessageID>();
         const _: () = assert!(MESSAGE_ID_SIZE <= size_of::<CounterKey>());
 
-        let mut id = [0; MESSAGE_ID_SIZE];
-        id.copy_from_slice(&key[0..MESSAGE_ID_SIZE]);
-        let id = MessageID::from_le_bytes(id);
+        // PANICS: Assert above checks that array is large enough
+        let id = key.first_chunk::<MESSAGE_ID_SIZE>().unwrap();
+        let id = MessageID::from_le_bytes(*id);
 
-        let counter = *self.counters.entry(key)
+        let counter = *self.counters.entry((kind, datatype, key))
             .and_modify(|c| *c += 1)
             .or_insert(1);
 
@@ -146,14 +124,9 @@ impl QueueState
 
     fn extended_next_message_id<Message: BaseMessageID>(&mut self, message: Message, senders: &Communicator, receivers: &Communicator) -> MessageID
     {
-        let mut sha = ring::digest::Context::new(&ring::digest::SHA256);
-        hash_communicator(senders, &mut sha);
-        hash_message(message, &mut sha);
-        hash_communicator(receivers, &mut sha);
+        let key = message.hash(senders, receivers).as_ref().try_into().unwrap();
 
-        let key = finish_hash(sha);
-
-        self.update_counter(key)
+        self.update_counter(Message::KIND, message.datatype(), key)
     }
 
     async fn send_message(net_channel: tokio::sync::mpsc::Sender<NetCommand>, message: metadata::Message, data: ReadData) -> Result<(), SendError>

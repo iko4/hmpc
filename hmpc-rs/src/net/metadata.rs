@@ -5,7 +5,29 @@ pub(crate) trait BaseMessageID
 {
     const KIND: MessageKind;
 
-    fn hash(self, hash: &mut ring::digest::Context);
+    fn datatype(&self) -> MessageDatatype;
+
+    fn hash_metadata(&self, hash: &mut ring::digest::Context);
+
+    fn hash_communicator(communicator: &super::Communicator, hash: &mut ring::digest::Context)
+    {
+        let len = communicator.len() as u64;
+        hash.update(len.to_le_bytes().as_slice());
+        for party in communicator
+        {
+            hash.update(party.to_le_bytes().as_slice());
+        }
+    }
+
+    fn hash(&self, senders: &super::Communicator, receivers: &super::Communicator) -> ring::digest::Digest
+    {
+        let mut sha = ring::digest::Context::new(&ring::digest::SHA256);
+        Self::hash_communicator(senders, &mut sha);
+        self.hash_metadata(&mut sha);
+        Self::hash_communicator(receivers, &mut sha);
+
+        sha.finish()
+    }
 }
 
 pub(crate) trait ToMessage
@@ -21,8 +43,15 @@ macro_rules! message
         {
             const KIND: MessageKind = MessageKind::$t;
 
-            fn hash(self, _hash: &mut ring::digest::Context)
+            fn datatype(&self) -> MessageDatatype
             {
+                self.datatype
+            }
+
+            fn hash_metadata(&self, _hash: &mut ring::digest::Context)
+            {
+                _hash.update(Self::KIND.to_le_bytes().as_slice());
+                _hash.update(self.datatype.to_le_bytes().as_slice());
                 $(
                     $(
                         _hash.update(self.$member.to_le_bytes().as_slice());
