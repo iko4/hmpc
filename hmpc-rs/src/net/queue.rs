@@ -141,7 +141,7 @@ impl QueueState
 
     fn next_message_id<Message: BaseMessageID>(&mut self, message: Message, communicator: &Communicator) -> MessageID
     {
-        self.extended_next_message_id(message, communicator, &Communicator::new())
+        self.extended_next_message_id(message, communicator, communicator)
     }
 
     fn extended_next_message_id<Message: BaseMessageID>(&mut self, message: Message, senders: &Communicator, receivers: &Communicator) -> MessageID

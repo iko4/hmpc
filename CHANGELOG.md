@@ -2,15 +2,20 @@
 
 Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## Unreleased
 
 ### Added
 
-- `bool_cast` to explicitly convert values to booleans
+- `bool_cast` to explicitly convert values to booleans.
+
+### Changed
+
+- Message ID for non-extended operations changed: Use same communicator for receivers as for senders.
 
 ### Fixed
 
-- Missing session feature (cmake)
+- Missing session feature (cmake).
 
 
 ## Version 0.5.0 - 2025-01-30
@@ -22,7 +27,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 - Feature: Session IDs (networking).
 - Test: Tag of underlying datatype (networking).
 
-### Changes
+### Changed
 
 - Upgrade dependencies and build environment.
 - Change file extension for keys and certificates.
