@@ -2,10 +2,13 @@
 
 An HPC-inspired MPC library.
 
-This work is a work in progress and an academic prototype.
+hmpc builds on concepts from [high performance computing (HPC)](docs/README.md#high-performance-computing) to enable efficient [multiparty computation (MPC)](docs/README.md#multiparty-computation) implementations.
+The library includes communication and computing interfaces for parallel computations and asynchronous networking.
+See the [documentation](docs/README.md) for the library concepts/design and the [changelog](CHANGELOG.md) for a history of additions and changes.
+
+> ⚠️ This work is a work in progress and an academic prototype.
 As such, some features are still missing (e.g., an MPC API built on lower-level primitives) and it is not meant to be used in production environments.
 
-See the [docs](docs/README.md) for documentation on concepts and the general library design.
 
 ## Preparing a Build Environment 🧰
 
@@ -15,7 +18,7 @@ We tested the following containerized build environments for our software:
 Note that our setup only accounts for CPU-based builds for Dev Containers.
 We provide instructions for CPU-based and GPU-based builds using Docker.
 
-The build environment builds a recent version of [the LLVM-based oneAPI data parallel C++ compiler](https://github.com/intel/llvm) from source.
+The build environment builds a recent version of the [LLVM](https://llvm.org/)-based [oneAPI data parallel C++ compiler](https://github.com/intel/llvm) from source.
 This might take some time.
 
 

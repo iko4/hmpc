@@ -7,6 +7,18 @@ The keys in the "parties" dictionary are used as party identifier and have to be
 The values for these dictionary keys correspond to the network address (host name or IP address; with or without port), while also a default port can be specified.
 
 The certificates and private key of the current party are by default located in a ".mpc" directory next to "mpc.yaml".
+This can be overwritten by setting the following config keys:
+
+- "cert_dir":
+    Directory of certificates.
+- "cert_keys_dir":
+    Directory of certificate private keys.
+- "sign_verify_dir":
+    Enabled with the ["signing" feature](features.md#signing).
+    Directory of signature verification keys.
+- "sign_keys_dir":
+    Enabled with the ["signing" feature](features.md#signing).
+    Directory of private signing keys.
 
 ### Environment Variables
 
@@ -44,8 +56,8 @@ session:
 
 The following shows an example directory structure for an application using hmpc.
 For the above three party [example config](#example-config), the directory structure for *party 1* could look like the following.
-Note that certificates and signature verification keys (if the ["signing" feature](features.md#signing) is enable) for all parties are required.
-The private certificate key and private signing key of only the current party (*party 1*) are required.
+Note that certificates and signature verification keys (if the ["signing" feature](features.md#signing) is enable) are required for all parties.
+The private certificate key and private signing key are required only for the current party (party 1).
 At the other parties (party 0 and party 2), the structure looks similar but different private keys are expected.
 
 ```
@@ -78,6 +90,7 @@ For example, for a [broadcast](#broadcast), the communicator could be parties {0
 ## Communication Operations
 
 The following communication operations similar to the ones in [MPI](https://www.mpi-forum.org/) are supported:
+
 - [send](#send)
 - (multi) [broadcast](#broadcast)
 - [scatter](#scatter)
@@ -210,31 +223,22 @@ Note that we give the bit length of each metadata member (interpreted as little-
 
 - [message format version](#message-format-version) (8 bit, `v`):
     The current version of the format is "0".
-
 - [feature flags](#feature-flags) (8 bit, `f`):
     Specifies which networking features are enabled.
     These add additional metadata members to a message.
-
 - [message kind](#message-kind) (8 bit, `k`):
     Specifies which kind of communication operation is performed.
-
 - [datatype tag](#datatype-tag) (8 bit, `t`):
     Specifies which underlying datatype is used.
-
 - [sender ID](#sender-and-receiver-id) (16 bit, `s`):
     Identifier of the sending party.
-
 - [receiver ID](#sender-and-receiver-id) (16 bit, `r`):
     Identifier of the receiving party.
-
 - [message ID](#message-id) (64 bit, `m`):
     Identifier of the current message.
-
 - optional, enabled with ["sessions" feature](features.md#sessions):
     [session ID](#optional-session-id) (128 bit, `i`).
-
 - [data payload](#data-payload) (remaining bytes, `d`)
-
 - optional, enabled with ["signing" feature](features.md#signing):
     [message signature](#optional-signature) (512 bit, `z`).
 
@@ -311,53 +315,46 @@ After version 0, the version number will be incremented once the format changes.
 
 ### Feature Flags
 
-Features that change the message format are indicated by bits of this metadata member.
-Currently, ["sessions"](features.md#sessions) and ["signing"](features.md#signing) are supported features.
-The bits of this member indicate if the feature is enabled (1) or not (0).
-The feature bits are the following (in order):
+[Features](features.md) that change the message format are indicated by bits of this metadata member.
+Currently, ["sessions"](features.md#sessions) and ["signing"](features.md#signing) are features that change the networking behavior.
+The bits of this member indicate if the feature is enabled (`1`) or not (`0`).
+The feature bits are the following (in order);
 
-- ["sessions" feature](features.md#sessions)
-- ["signing" feature](features.md#signing)
-- reserved for future use
-- reserved for future use
-- reserved for future use
-- reserved for future use
-- reserved for future use
-- reserved for future use
+1. ["sessions" feature](features.md#sessions)
+2. ["signing" feature](features.md#signing)
+3. reserved for future use
+4. reserved for future use
+5. reserved for future use
+6. reserved for future use
+7. reserved for future use
+8. reserved for future use
 
 ### Message Kind
 
 The above communication operations are encoded as follows:
 
-- Send = 1
-
-- Broadcast = 2
-
-- Scatter = 3
-
-- Gather = 4
-
-- All Gather = 5
-
-- All To All = 6
+- [Send](#send) = 1
+- [Broadcast](#broadcast) = 2
+- [Scatter](#scatter) = 3
+- [Gather](#gather) = 4
+- [All Gather](#all-gather) = 5
+- [All To All](#all-to-all) = 6
 
 ### Datatype Tag
 
 The underlying datatype of the message is encoded with a tag as follows:
 
 1. The bit width of the type is encoded as 8 bit unsigned integer.
-
-2. The endianness is encoded as 0x1 for little-endian types and 0x0 otherwise.
-
+2. The endianness is encoded as `0x01` for little-endian types and `0x00` otherwise.
 3. The result is the bitwise OR of the above values.
 
 #### Examples
 
-- uint1: `0x1 | 0x1 = 0x1`
-- uint8: `0x8 | 0x1 = 0x9`
+- uint1: `0x01 | 0x01 = 0x01`
+- uint8: `0x08 | 0x01 = 0x09`
 - uint16:
-    - for little-endian: `0x10 | 0x1 = 0x11`
-    - for big-endian: `0x10 | 0x0 = 0x10`
+    - for little-endian: `0x10 | 0x01 = 0x11`
+    - for big-endian: `0x10 | 0x00 = 0x10`
 
 ### Sender and Receiver ID
 
@@ -366,7 +363,7 @@ These integers are used as identifiers in messages and map to the same identifie
 
 ### Message ID
 
-The communicator of the involved parties is hashed to get an initial message ID.
+The [communicator](#communicator) of the involved parties is hashed to get an initial message ID.
 This is to avoid a collision for messages with the same metadata (sender, receiver, etc.) if the overall communication pattern is different;
 for example, a broadcast from party 0 to parties {1, 2} and a broadcast from party 0 to parties {1, 2, 3, 4} at the same time.
 The initial message IDs are incremented for every communication operation, *not* for every message;

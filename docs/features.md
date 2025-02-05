@@ -1,6 +1,7 @@
 # Optional Features
 
 The following features are available
+
 - [sessions](#sessions)
 - [signing](#signing)
 - [statistics](#statistics)
@@ -27,6 +28,7 @@ In other words, the receiver can show the message to somebody else, in case the 
 
 When enabled, statistics about the behavior of the application are recorded.
 Currently, this includes
+
 - the overall number of data payload bytes send
 - the overall number of data payload bytes received
 - the overall number of calls to communication operations, i.e., the number of logical communication rounds
