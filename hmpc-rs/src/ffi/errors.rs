@@ -1,6 +1,10 @@
 use quinn::{ConnectionError, ReadError, WriteError};
 
 use crate::net::errors::{ClientError, ReceiveError, SendError, SendReceiveError, ServerError};
+#[cfg(feature = "signing")]
+use crate::net::errors::SignatureError;
+#[cfg(feature = "collective-consistency")]
+use crate::net::errors::ConsistencyCheckError;
 
 #[repr(u8)]
 #[derive(Debug)]
@@ -95,6 +99,12 @@ pub enum ReceiveErrc
     SessionMismatch,
     SignatureVerification,
     UnknownSender,
+    MultipleChecks,
+    MultipleRequests,
+    MultipleMessages,
+    UnknownCheck,
+    InconsistentSignatureVerification,
+    InconsistentCollectiveCommunication,
 }
 
 impl From<ConnectionError> for ReceiveErrc
@@ -155,9 +165,22 @@ impl From<ReceiveError> for ReceiveErrc
             #[cfg(feature = "sessions")]
             ReceiveError::Server(ServerError::SessionMismatch) => Self::SessionMismatch,
             #[cfg(feature = "signing")]
-            ReceiveError::Server(ServerError::SignatureVerification) => Self::SignatureVerification,
-            #[cfg(feature = "signing")]
-            ReceiveError::Server(ServerError::UnknownSender) => Self::UnknownSender,
+            ReceiveError::Server(ServerError::Signature(signature)) => match signature
+            {
+                SignatureError::SignatureVerification => Self::SignatureVerification,
+                SignatureError::UnknownSender => Self::UnknownSender,
+            },
+            #[cfg(feature = "collective-consistency")]
+            ReceiveError::ConsistencyCheck(consistency) => match consistency
+            {
+                ConsistencyCheckError::MultipleChecks => Self::MultipleChecks,
+                ConsistencyCheckError::MultipleRequests => Self::MultipleRequests,
+                ConsistencyCheckError::MultipleMessages => Self::MultipleMessages,
+                ConsistencyCheckError::UnknownSender => Self::UnknownSender,
+                ConsistencyCheckError::UnknownCheck => Self::UnknownCheck,
+                ConsistencyCheckError::InconsistentSignatureVerification => Self::InconsistentSignatureVerification,
+                ConsistencyCheckError::InconsistentCollectiveCommunication => Self::InconsistentCollectiveCommunication,
+            },
         }
     }
 }
@@ -200,6 +223,12 @@ pub enum SendReceiveErrc
     SessionMismatch,
     SignatureVerification,
     UnknownSender,
+    MultipleChecks,
+    MultipleRequests,
+    MultipleMessages,
+    UnknownCheck,
+    InconsistentSignatureVerification,
+    InconsistentCollectiveCommunication,
 }
 
 impl From<SendErrc> for SendReceiveErrc
@@ -261,6 +290,12 @@ impl From<ReceiveErrc> for SendReceiveErrc
             ReceiveErrc::SessionMismatch => Self::SessionMismatch,
             ReceiveErrc::SignatureVerification => Self::SignatureVerification,
             ReceiveErrc::UnknownSender => Self::UnknownSender,
+            ReceiveErrc::MultipleChecks => Self::MultipleChecks,
+            ReceiveErrc::MultipleRequests => Self::MultipleRequests,
+            ReceiveErrc::MultipleMessages => Self::MultipleMessages,
+            ReceiveErrc::UnknownCheck => Self::UnknownCheck,
+            ReceiveErrc::InconsistentSignatureVerification => Self::InconsistentSignatureVerification,
+            ReceiveErrc::InconsistentCollectiveCommunication => Self::InconsistentCollectiveCommunication,
         }
     }
 }

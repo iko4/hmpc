@@ -75,6 +75,36 @@ pub enum ClientError
     Write(#[from] WriteError),
 }
 
+#[cfg(feature = "signing")]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum SignatureError
+{
+    #[error("Signature verification failed")]
+    SignatureVerification,
+    #[error("Unknown sender")]
+    UnknownSender,
+}
+
+#[cfg(feature = "collective-consistency")]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum ConsistencyCheckError
+{
+    #[error("Got multiple consistency checks for the same message")]
+    MultipleChecks,
+    #[error("Got multiple requests for consistency checks")]
+    MultipleRequests,
+    #[error("Got multiple messages that could be checked")]
+    MultipleMessages,
+    #[error("Unknown sender")]
+    UnknownSender,
+    #[error("Unknown check (got a check that was not registered for)")]
+    UnknownCheck,
+    #[error("Signature verification failed during consistency check")]
+    InconsistentSignatureVerification,
+    #[error("Inconsistent collective communication")]
+    InconsistentCollectiveCommunication,
+}
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum ServerError
 {
@@ -94,11 +124,8 @@ pub enum ServerError
     #[error("Session ID does not match")]
     SessionMismatch,
     #[cfg(feature = "signing")]
-    #[error("Signature verification failed")]
-    SignatureVerification,
-    #[cfg(feature = "signing")]
-    #[error("Unknown sender")]
-    UnknownSender,
+    #[error(transparent)]
+    Signature(#[from] SignatureError),
 }
 
 #[derive(Debug, Error)]
@@ -121,6 +148,9 @@ pub enum ReceiveError
     Receive(#[from] RecvError),
     #[error(transparent)]
     Server(#[from] ServerError),
+    #[cfg(feature = "collective-consistency")]
+    #[error(transparent)]
+    ConsistencyCheck(#[from] ConsistencyCheckError),
 }
 
 #[derive(Debug, Error)]

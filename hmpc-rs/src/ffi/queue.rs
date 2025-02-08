@@ -459,6 +459,40 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_to_all(queue: Nullable<Que
     }
 }
 
+/// Consistency checks for collective communication operations are disabled.
+/// Enable the "collective-consistency" feature to add consistency checks.
+#[cfg(not(feature = "collective-consistency"))]
+#[no_mangle]
+pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(_queue: Nullable<Queue>) -> SendReceiveErrc
+{
+    warn!("The \"collective-consistency\" feature is not enabled");
+    SendReceiveErrc::Ok
+}
+
+/// Wait for collective communication operations to finish
+/// # Safety
+/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+#[cfg(feature = "collective-consistency")]
+#[no_mangle]
+pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(queue: Nullable<Queue>) -> SendReceiveErrc
+{
+    info!("Wait");
+
+    check_mut_pointer!(queue, SendReceiveErrc::InvalidHandle);
+
+    let queue = unsafe { queue.as_mut() };
+
+    if let Err(e) = queue.wait()
+    {
+        error!("Wait error: {:?}", e);
+        e.into()
+    }
+    else
+    {
+        SendReceiveErrc::Ok
+    }
+}
+
 /// Retrieving network statistics is disabled.
 /// Enable the "statistics" feature to get estimates on the number of bytes sent and received.
 #[cfg(not(feature = "statistics"))]

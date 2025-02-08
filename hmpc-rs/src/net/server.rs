@@ -5,11 +5,14 @@ use std::sync::Arc;
 use log::{error, info};
 use quinn::Incoming;
 
+use super::DataChannel;
 use super::config::{Config, DEFAULT_TIMEOUT};
 #[cfg(feature = "sessions")]
 use super::SessionID;
 #[cfg(feature = "signing")]
 use super::sign::PublicKey;
+#[cfg(feature = "collective-consistency")]
+use super::{ConsistencyCheckChannel, ConsistencyCheckCommand};
 use crate::net::{make_addr, DataCommand, PartyID, ReceiveMessage};
 
 async fn make_server(id: PartyID, config: &Config) -> quinn::Endpoint
@@ -28,7 +31,7 @@ async fn make_server_config(id: PartyID, config: &Config) -> quinn::ServerConfig
     server_config
 }
 
-async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: SessionID, #[cfg(feature = "signing")] verification_keys: Arc<HashMap<PartyID, PublicKey>>, data_channel: tokio::sync::mpsc::Sender<DataCommand>, connecting: Incoming)
+async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: SessionID, #[cfg(feature = "signing")] verification_keys: Arc<HashMap<PartyID, PublicKey>>, data_channel: DataChannel, #[cfg(feature = "collective-consistency")] consistency_channel: ConsistencyCheckChannel, connecting: Incoming)
 {
     let connection = connecting.await.unwrap();
     info!("[Party {}] Incoming connection: from {} established", id, connection.remote_address());
@@ -36,14 +39,34 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: Se
     {
         info!("[Party {}] Incoming stream: from {} established", id, connection.remote_address());
         match ReceiveMessage::read_from(
-            #[cfg(feature = "sessions")] session,
-            #[cfg(feature = "signing")] &verification_keys,
+            #[cfg(feature = "sessions")]
+            session,
+            #[cfg(feature = "signing")]
+            &verification_keys,
             &mut stream
         ).await
         {
             Ok(message) =>
             {
-                data_channel.send(DataCommand::Received(message)).await.unwrap();
+                #[cfg(feature = "collective-consistency")]
+                let (message, signature) = message;
+                if message.metadata.kind.is_consistency_check()
+                {
+                    #[cfg(feature = "collective-consistency")]
+                    consistency_channel.send(
+                        // PANICS: We check above that MessageKind is for consistency check
+                        ConsistencyCheckCommand::ReceivedCheck(message.try_into().unwrap())
+                    ).await.unwrap();
+                }
+                else
+                {
+                    #[cfg(feature = "collective-consistency")]
+                    if let Ok(consistency) = (&message, signature).try_into()
+                    {
+                        consistency_channel.send(ConsistencyCheckCommand::ReceivedData(consistency)).await.unwrap();
+                    }
+                    data_channel.send(DataCommand::Received(message)).await.unwrap();
+                }
             },
             Err(e) =>
             {
@@ -53,7 +76,7 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: Se
     }
 }
 
-pub(crate) async fn run(id: PartyID, config: Config, data_channel: tokio::sync::mpsc::Sender<DataCommand>)
+pub(crate) async fn run(id: PartyID, config: Config, data_channel: DataChannel, #[cfg(feature = "collective-consistency")] consistency_channel: ConsistencyCheckChannel)
 {
     let endpoint = make_server(id, &config).await;
     // PANICS: Calling code checks that config.session is not None and contains a value
@@ -67,9 +90,13 @@ pub(crate) async fn run(id: PartyID, config: Config, data_channel: tokio::sync::
         tokio::spawn(
             handle_connection(
                 id,
-                #[cfg(feature = "sessions")] session,
-                #[cfg(feature = "signing")] verification_keys.clone(),
+                #[cfg(feature = "sessions")]
+                session,
+                #[cfg(feature = "signing")]
+                verification_keys.clone(),
                 data_channel.clone(),
+                #[cfg(feature = "collective-consistency")]
+                consistency_channel.clone(),
                 connecting
             )
         );

@@ -1,5 +1,5 @@
 use super::ptr::ReadData;
-use super::{MessageDatatype, MessageID, MessageKind, MessageSize, PartyID};
+use super::{Communicator, MessageDatatype, MessageID, MessageKind, MessageSize, PartyID};
 
 pub(crate) trait BaseMessageID
 {
@@ -9,7 +9,7 @@ pub(crate) trait BaseMessageID
 
     fn hash_metadata(&self, hash: &mut ring::digest::Context);
 
-    fn hash_communicator(communicator: &super::Communicator, hash: &mut ring::digest::Context)
+    fn hash_communicator(communicator: &Communicator, hash: &mut ring::digest::Context)
     {
         let len = communicator.len() as u64;
         hash.update(len.to_le_bytes().as_slice());
@@ -19,7 +19,7 @@ pub(crate) trait BaseMessageID
         }
     }
 
-    fn hash(&self, senders: &super::Communicator, receivers: &super::Communicator) -> ring::digest::Digest
+    fn hash(&self, senders: &Communicator, receivers: &Communicator) -> ring::digest::Digest
     {
         let mut sha = ring::digest::Context::new(&ring::digest::SHA256);
         Self::hash_communicator(senders, &mut sha);
@@ -27,6 +27,12 @@ pub(crate) trait BaseMessageID
         Self::hash_communicator(receivers, &mut sha);
 
         sha.finish()
+    }
+
+    #[cfg(feature = "collective-consistency")]
+    fn to_consistency_check(&self, sender: PartyID, receivers: Communicator, id: MessageID) -> ConsistencyCheck
+    {
+        ConsistencyCheck { kind: Self::KIND, datatype: self.datatype(), sender: sender, receivers: receivers, id: id }
     }
 }
 
@@ -170,3 +176,13 @@ impl AllToAll
 }
 message!(AllToAll);
 
+#[cfg(feature = "collective-consistency")]
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub struct ConsistencyCheck
+{
+    pub(crate) kind: MessageKind,
+    pub(crate) datatype: MessageDatatype,
+    pub(crate) sender: PartyID,
+    pub(crate) receivers: Communicator,
+    pub(crate) id: MessageID,
+}

@@ -15,21 +15,27 @@ mod message_buffer;
 pub mod metadata;
 #[cfg(feature = "signing")]
 pub(crate) mod sign;
+#[cfg(feature = "collective-consistency")]
+pub(crate) mod consistency;
 pub mod ptr;
 pub(crate) mod queue;
 mod server;
 
 pub use self::config::Config;
 #[cfg(feature = "signing")]
-use self::sign::{PrivateKey, PublicKey};
-use self::errors::{ClientError, FromPrimitiveError, ServerError};
+use self::sign::{PrivateKey, PublicKey, SIGNATURE_SIZE};
+#[cfg(feature = "signing")]
 use self::hash::hash;
+use self::errors::{ClientError, FromPrimitiveError, ServerError};
+#[cfg(feature = "collective-consistency")]
+use self::errors::ConsistencyCheckError;
+#[cfg(feature = "collective-consistency")]
+use self::hash::{Hash, HASH_SIZE};
+#[cfg(feature = "collective-consistency")]
+use self::sign::Signature;
 pub use self::queue::Queue;
 
 const SESSION_ID_SIZE: usize = 128 / 8; // 128 bit => [u8; 16]
-
-#[cfg(feature = "signing")]
-const SIGNATURE_SIZE: usize = 64; // see https://ed25519.cr.yp.to/
 
 const MESSAGE_SIZE_LIMIT: usize = 2 << 32;
 
@@ -101,6 +107,10 @@ pub enum MessageKind
     /// Before: for i in [1..n] for j in [1..n]: Pi holds xij
     /// After: for i in [1..n] for j in [1..n]: Pi holds xji
     AllToAll = 6,
+    /// Check collective consistency of `Broadcast`
+    ConsistencyCheckBroadcast = 18,
+    /// Check collective consistency of `AllGather`
+    ConsistencyCheckAllGather = 21,
 }
 
 type MessageKindUnderlying = u8;
@@ -119,6 +129,8 @@ impl TryFrom<MessageKindUnderlying> for MessageKind
             x if x == MessageKind::Gather as MessageKindUnderlying => Ok(MessageKind::Gather),
             x if x == MessageKind::AllGather as MessageKindUnderlying => Ok(MessageKind::AllGather),
             x if x == MessageKind::AllToAll as MessageKindUnderlying => Ok(MessageKind::AllToAll),
+            x if x == MessageKind::ConsistencyCheckBroadcast as MessageKindUnderlying => Ok(MessageKind::ConsistencyCheckBroadcast),
+            x if x == MessageKind::ConsistencyCheckAllGather as MessageKindUnderlying => Ok(MessageKind::ConsistencyCheckAllGather),
             x => Err(FromPrimitiveError::FromU8(x)),
         }
     }
@@ -136,6 +148,44 @@ impl MessageKind
     {
         let value = MessageKindUnderlying::from_le_bytes(bytes);
         value.try_into()
+    }
+
+    fn needs_check(self) -> bool
+    {
+        match self
+        {
+            MessageKind::Broadcast | MessageKind::AllGather => true,
+            _ => false,
+        }
+    }
+
+    fn is_consistency_check(self) -> bool
+    {
+        match self
+        {
+            MessageKind::ConsistencyCheckBroadcast | MessageKind::ConsistencyCheckAllGather => true,
+            _ => false,
+        }
+    }
+
+    fn try_to_check(self) -> Result<Self, ()>
+    {
+        match self
+        {
+            MessageKind::Broadcast => Ok(MessageKind::ConsistencyCheckBroadcast),
+            MessageKind::AllGather => Ok(MessageKind::ConsistencyCheckAllGather),
+            _ => Err(())
+        }
+    }
+
+    fn try_from_check(self) -> Result<Self, ()>
+    {
+        match self
+        {
+            MessageKind::ConsistencyCheckBroadcast => Ok(MessageKind::Broadcast),
+            MessageKind::ConsistencyCheckAllGather => Ok(MessageKind::AllGather),
+            _ => Err(())
+        }
     }
 }
 
@@ -195,16 +245,20 @@ impl SendMessage
 
         #[cfg(feature = "signing")]
         {
-            let signature = signature.as_ref();
             assert_eq!(signature.len(), SIGNATURE_SIZE);
 
-            stream.write_all(signature).await?;
+            stream.write_all(signature.as_slice()).await?;
         }
 
         Ok(())
     }
 }
 unsafe impl Send for SendMessage {}
+
+#[cfg(not(feature = "collective-consistency"))]
+type ReadResult = ReceiveMessage;
+#[cfg(feature = "collective-consistency")]
+type ReadResult = (ReceiveMessage, Signature);
 
 #[derive(Debug)]
 pub struct ReceiveMessage
@@ -287,8 +341,10 @@ impl ReceiveMessage
     }
 
     #[cfg(feature = "signing")]
-    async fn read_from(#[cfg(feature = "sessions")] session: SessionID, verification_keys: &HashMap<PartyID, PublicKey>, stream: &mut RecvStream) -> Result<Self, ServerError>
+    async fn read_from(#[cfg(feature = "sessions")] session: SessionID, verification_keys: &HashMap<PartyID, PublicKey>, stream: &mut RecvStream) -> Result<ReadResult, ServerError>
     {
+        use errors::SignatureError;
+
         let full_message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
         let full_message = full_message.as_slice();
 
@@ -310,16 +366,32 @@ impl ReceiveMessage
             hash(result.data.as_ref()).as_ref(),
         ].concat();
 
-        verification_keys.get(&result.metadata.sender)
-            .map_or(Err(ServerError::UnknownSender), Ok)?
-            .verify(&metadata, signature)
-            .or(Err(ServerError::SignatureVerification))?;
+        let sender = if result.metadata.kind.is_consistency_check()
+        {
+            result.metadata.receiver
+        }
+        else
+        {
+            result.metadata.sender
+        };
 
-        Ok(result)
+        verification_keys.get(&sender)
+            .map_or(Err(SignatureError::UnknownSender), Ok)?
+            .verify(&metadata, signature)
+            .or(Err(SignatureError::SignatureVerification))?;
+
+        #[cfg(not(feature = "collective-consistency"))]
+        {
+            Ok(result)
+        }
+        #[cfg(feature = "collective-consistency")]
+        {
+            Ok((result, *signature))
+        }
     }
 
     #[cfg(not(feature = "signing"))]
-    async fn read_from(#[cfg(feature = "sessions")] session: SessionID, stream: &mut RecvStream) -> Result<Self, ServerError>
+    async fn read_from(#[cfg(feature = "sessions")] session: SessionID, stream: &mut RecvStream) -> Result<ReadResult, ServerError>
     {
         let message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
 
@@ -327,6 +399,56 @@ impl ReceiveMessage
     }
 }
 
+
+#[cfg(feature = "collective-consistency")]
+#[derive(Debug)]
+pub(crate) struct ConsistencyCheckMessage
+{
+    metadata: metadata::Message,
+    hash: Hash,
+    signature: Signature,
+}
+#[cfg(feature = "collective-consistency")]
+impl TryFrom<ReceiveMessage> for ConsistencyCheckMessage
+{
+    type Error = ServerError;
+
+    fn try_from(value: ReceiveMessage) -> Result<Self, Self::Error>
+    {
+        if value.metadata.kind.is_consistency_check()
+        {
+            let (hash, data) = value.data.as_slice().split_first_chunk::<HASH_SIZE>()
+                .ok_or(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(value.data.len())))?;
+
+            let signature = data.try_into()
+                .map_err(|_| ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(data.len())))?;
+
+            Ok(Self {metadata: value.metadata, hash: *hash, signature: signature} )
+        }
+        else
+        {
+            Err(ServerError::FromPrimitive(FromPrimitiveError::FromU8(value.metadata.kind as MessageKindUnderlying)))
+        }
+    }
+}
+#[cfg(feature = "collective-consistency")]
+impl TryFrom<(&ReceiveMessage, Signature)> for ConsistencyCheckMessage
+{
+    type Error = ();
+
+    fn try_from(value: (&ReceiveMessage, Signature)) -> Result<Self, Self::Error>
+    {
+        let (value, signature) = value;
+        if value.metadata.kind.needs_check()
+        {
+            Ok(Self{ metadata: value.metadata.clone(), hash: hash(value.data.as_slice()), signature: signature })
+        }
+        else
+        {
+            Err(())
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum DataCommand
@@ -336,12 +458,32 @@ pub enum DataCommand
     /// Received data from network
     Received(ReceiveMessage),
 }
+type DataChannel = tokio::sync::mpsc::Sender<DataCommand>;
 
 #[derive(Debug)]
 pub enum NetCommand
 {
     Send(SendMessage, tokio::sync::oneshot::Sender<Result<(), ClientError>>),
+    #[cfg(feature = "collective-consistency")]
+    SendCheck(SendMessage, PartyID, tokio::sync::oneshot::Sender<Result<(), ClientError>>),
 }
+type NetChannel = tokio::sync::mpsc::Sender<NetCommand>;
+
+#[cfg(feature = "collective-consistency")]
+#[derive(Debug)]
+pub(crate) enum ConsistencyCheckCommand
+{
+    /// Want to check consistency for this
+    Request(metadata::ConsistencyCheck),
+    /// Received check message from network
+    ReceivedCheck(ConsistencyCheckMessage),
+    /// Received data to check from network
+    ReceivedData(ConsistencyCheckMessage),
+    /// Wait for all consistency checks to be finished
+    Wait(tokio::sync::oneshot::Sender<Result<(), ConsistencyCheckError>>)
+}
+#[cfg(feature = "collective-consistency")]
+type ConsistencyCheckChannel = tokio::sync::mpsc::Sender<ConsistencyCheckCommand>;
 
 fn make_addr(id: PartyID, config: &Config) -> SocketAddr
 {

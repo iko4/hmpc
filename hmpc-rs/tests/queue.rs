@@ -32,6 +32,8 @@ impl<T> AsNonNullPtrExt<T> for Vec<T>
 #[test]
 fn broadcast()
 {
+    let _ = env_logger::try_init();
+
     const COUNT: usize = 5;
     const PARTIES: usize = 5;
 
@@ -91,6 +93,8 @@ fn broadcast()
 #[test]
 fn gather()
 {
+    let _ = env_logger::try_init();
+
     const COUNT: usize = 5;
     const PARTIES: usize = 5;
 
@@ -166,6 +170,8 @@ fn gather()
 #[test]
 fn all_gather()
 {
+    let _ = env_logger::try_init();
+
     const COUNT: usize = 6;
     const PARTIES: usize = 4;
 
@@ -239,5 +245,7 @@ fn all_gather()
 #[test]
 fn all_to_all()
 {
+    let _ = env_logger::try_init();
+
     // TODO
 }

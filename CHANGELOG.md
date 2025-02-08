@@ -9,6 +9,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 ### Added
 
 - `bool_cast` to explicitly convert values to booleans.
+- Feature: Check consistency of collective communication operations (networking).
 
 ### Changed
 
@@ -19,6 +20,10 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 ### Fixed
 
 - Missing session feature (cmake).
+
+### Security
+
+- Collective communication operations can be checked for consistency.
 
 
 ## Version 0.5.0 - 2025-01-30

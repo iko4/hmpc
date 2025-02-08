@@ -877,6 +877,14 @@ namespace hmpc::net
             return result;
         }
 
+        void wait()
+        {
+            if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_wait(handle.get()); errc != hmpc::ffi::SendReceiveErrc::ok)
+            {
+                hmpc::ffi::throw_exception(errc);
+            }
+        }
+
         hmpc::net::statistics stats()
         {
             return hmpc::ffi::hmpc_ffi_net_queue_network_statistics(handle.get());

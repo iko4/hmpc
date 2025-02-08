@@ -38,6 +38,26 @@ async fn make_client_config(config: &Config) -> quinn::ClientConfig
     client_config
 }
 
+async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoint: &quinn::Endpoint, outgoing: &mut std::collections::HashMap::<PartyID, quinn::Connection>) -> quinn::Connection
+{
+    match outgoing.entry(receiver)
+    {
+        Entry::Occupied(entry) =>
+        {
+            let connection = entry.get();
+            info!("[Party {}] Outgoing connection: to {} reused", id, connection.remote_address());
+            connection.clone()
+        },
+        Entry::Vacant(entry) =>
+        {
+            info!("[Party {}] Outgoing connection: trying to connect new client", id);
+            let connection = connect_client(endpoint, receiver, config).await;
+            info!("[Party {}] Outgoing connection: to {} established", id, connection.remote_address());
+            entry.insert(connection).clone()
+        },
+    }
+}
+
 async fn connect_client(client: &quinn::Endpoint, id: PartyID, config: &Config) -> quinn::Connection
 {
     client.connect(make_addr(id, config), config.name(id)).unwrap().await.unwrap()
@@ -57,8 +77,10 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: Se
     };
     info!("[Party {}] Outgoing stream: to {} established", id, connection.remote_address());
     if let Err(e) = message.write_to(
-        #[cfg(feature = "sessions")] session,
-        #[cfg(feature = "signing")] &signing_key,
+        #[cfg(feature = "sessions")]
+        session,
+        #[cfg(feature = "signing")]
+        &signing_key,
         &mut stream
     ).await
     {
@@ -90,27 +112,31 @@ pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
         {
             NetCommand::Send(message, answer_channel) =>
             {
-                let connection = match outgoing.entry(message.metadata.receiver)
-                {
-                    Entry::Occupied(entry) =>
-                    {
-                        let connection = entry.get();
-                        info!("[Party {}] Outgoing connection: to {} reused", id, connection.remote_address());
-                        connection.clone()
-                    },
-                    Entry::Vacant(entry) =>
-                    {
-                        info!("[Party {}] Outgoing connection: trying to connect new client", id);
-                        let connection = connect_client(&endpoint, message.metadata.receiver, &config).await;
-                        info!("[Party {}] Outgoing connection: to {} established", id, connection.remote_address());
-                        entry.insert(connection).clone()
-                    },
-                };
+                let connection = make_connection(id, message.metadata.receiver, &config, &endpoint, &mut outgoing).await;
                 tokio::spawn(
                     handle_connection(
                         id,
-                        #[cfg(feature = "sessions")] session,
-                        #[cfg(feature = "signing")] signing_key.clone(),
+                        #[cfg(feature = "sessions")]
+                        session,
+                        #[cfg(feature = "signing")]
+                        signing_key.clone(),
+                        connection,
+                        message,
+                        answer_channel
+                    )
+                );
+            },
+            #[cfg(feature = "collective-consistency")]
+            NetCommand::SendCheck(message, receiver, answer_channel) =>
+            {
+                let connection = make_connection(id, receiver, &config, &endpoint, &mut outgoing).await;
+                tokio::spawn(
+                    handle_connection(
+                        id,
+                        #[cfg(feature = "sessions")]
+                        session,
+                        #[cfg(feature = "signing")]
+                        signing_key.clone(),
                         connection,
                         message,
                         answer_channel

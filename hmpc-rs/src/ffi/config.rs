@@ -1,6 +1,6 @@
 use std::ffi::{c_char, CStr};
 
-use log::{debug, error, warn};
+use log::{debug, error};
 
 use crate::ffi::{check_mut_pointer, check_pointer, free_nullable, nullable};
 use crate::net::config::{Config, Session};
@@ -96,7 +96,10 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_session_from_env(config: Nullable<C
     debug!("Trying to read session ID from environment variable");
 
     #[cfg(not(feature = "sessions"))]
-    warn!("The \"sessions\" feature is not enabled");
+    {
+        use log::warn;
+        warn!("The \"sessions\" feature is not enabled");
+    }
 
     if let Some(session) = Session::try_from_env()
     {

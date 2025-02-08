@@ -7,13 +7,19 @@ pub type Data = *mut c_void;
 pub type NonNullData = NonNull<c_void>;
 pub type NullableData = Nullable<c_void>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReadData
 {
     ptr: *const u8,
 }
 impl ReadData
 {
+    #[must_use]
+    pub fn new_unchecked(ptr: *const u8) -> Self
+    {
+        Self { ptr: ptr }
+    }
+
     #[must_use]
     pub fn as_ptr(&self) -> *const u8
     {

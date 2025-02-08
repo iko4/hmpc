@@ -1,4 +1,8 @@
-use ring::signature::{Ed25519KeyPair, Signature, UnparsedPublicKey, ED25519};
+use ring::signature::{Ed25519KeyPair, UnparsedPublicKey, ED25519};
+
+pub(crate) const SIGNATURE_SIZE: usize = 64; // see https://ed25519.cr.yp.to/
+
+pub type Signature = [u8; SIGNATURE_SIZE];
 
 #[derive(Debug)]
 pub struct PublicKey(UnparsedPublicKey<Vec<u8>>);
@@ -27,6 +31,7 @@ impl PrivateKey
 
     pub fn sign(&self, message: &[u8]) -> Signature
     {
-        self.0.sign(message)
+        // PANICS: With the selected signature algorithm, the size should always match
+        self.0.sign(message).as_ref().try_into().unwrap()
     }
 }

@@ -24,6 +24,12 @@ When enabled, each message contains a [signature](networking.md#optional-signatu
 In other words, the receiver can show the message to somebody else, in case the sender misbehaved and the message can be used as proof of this.
 
 
+## Collective Consistency
+
+When enabled, all collective communication operations that require all parties to receive the same data are checked.
+This is done by sending extra messages to all other receivers and checking consistency by comparing if the same messages arrived.
+
+
 ## Statistics
 
 When enabled, statistics about the behavior of the application are recorded.

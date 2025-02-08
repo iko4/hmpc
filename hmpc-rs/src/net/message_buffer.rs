@@ -1,11 +1,14 @@
+use std::collections::HashMap;
+
 use log::{debug, error, warn};
 
-use crate::net::{DataCommand, OwnedData, PartyID};
+use super::{DataCommand, OwnedData, PartyID};
+
 
 pub(crate) async fn run(id: PartyID, mut receive_channel: tokio::sync::mpsc::Receiver<DataCommand>)
 {
-    let mut message_buffer = std::collections::HashMap::<_, OwnedData>::new();
-    let mut open_requests = std::collections::HashMap::new();
+    let mut message_buffer = HashMap::<_, OwnedData>::new();
+    let mut open_requests = HashMap::new();
 
     while let Some(command) = receive_channel.recv().await
     {

@@ -340,6 +340,13 @@ The above communication operations are encoded as follows:
 - [All Gather](#all-gather) = 5
 - [All To All](#all-to-all) = 6
 
+Additionally, if the ["collective-consistency" feature](features.md#collective-consistency) is enabled, the extra messages for checking consistency use these tags:
+
+- Check consistency of [Broadcast](#broadcast) = 18
+- Check consistency of [All Gather](#all-gather) = 21
+
+Note: The message kind value for consistency check message is the original message kind value OR `0x10`.
+
 ### Datatype Tag
 
 The underlying datatype of the message is encoded with a tag as follows:

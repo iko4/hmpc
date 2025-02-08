@@ -81,6 +81,18 @@ namespace hmpc::ffi
                 throw std::runtime_error("signature verification failed");
             case SendReceiveErrc::unknown_sender:
                 throw std::runtime_error("unknown sender");
+            case SendReceiveErrc::multiple_checks:
+                throw std::runtime_error("multiple checks");
+            case SendReceiveErrc::multiple_requests:
+                throw std::runtime_error("multiple requests");
+            case SendReceiveErrc::multiple_messages:
+                throw std::runtime_error("multiple messages");
+            case SendReceiveErrc::unknown_check:
+                throw std::runtime_error("unknown check");
+            case SendReceiveErrc::inconsistent_signature_verification:
+                throw std::runtime_error("signature verification failed (consistency check)");
+            case SendReceiveErrc::inconsistent_collective_communication:
+                throw std::runtime_error("inconsistent collective communication");
         }
     }
 }

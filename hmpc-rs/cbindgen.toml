@@ -34,4 +34,5 @@ friend constexpr bool operator==(NetworkStatistics const&, NetworkStatistics con
 [defines]
 "feature = sessions" = "HMPC_ENABLE_SESSIONS"
 "feature = signing" = "HMPC_ENABLE_SIGNING"
+"feature = collective-consistency" = "HMPC_ENABLE_COLLECTIVE_CONSISTENCY"
 "feature = statistics" = "HMPC_ENABLE_STATISTICS"

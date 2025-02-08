@@ -8,9 +8,12 @@ use tokio::task::JoinSet;
 
 use super::config::CHANNEL_CAPACITY;
 use super::errors::{QueueError, ReceiveError, SendError, SendReceiveError, ServerError, SizeMismatchError};
+use super::hash::Hash;
 use super::metadata::{self, AllGather, AllToAll, BaseMessageID, Broadcast, Gather, ToMessage};
 use super::ptr::{NonNullData, ReadData, WriteData};
-use super::{client, message_buffer, server, Communicator, Config, DataCommand, MessageDatatype, MessageID, MessageKind, MessageSize, NetCommand, PartyID, SendMessage};
+use super::{client, message_buffer, server, Communicator, Config, DataChannel, DataCommand, MessageDatatype, MessageID, MessageKind, MessageSize, NetChannel, NetCommand, PartyID, SendMessage};
+#[cfg(feature = "collective-consistency")]
+use super::{consistency, ConsistencyCheckChannel, ConsistencyCheckCommand};
 use crate::vec::Vec2d;
 
 #[derive(Debug, Clone, Copy)]
@@ -86,14 +89,16 @@ where
     result
 }
 
-type CounterKey = [u8; ring::digest::SHA256_OUTPUT_LEN];
+type CounterKey = Hash;
 
 #[derive(Debug)]
 struct QueueState
 {
     id: PartyID,
-    data_channel: tokio::sync::mpsc::Sender<DataCommand>,
-    net_channel: tokio::sync::mpsc::Sender<NetCommand>,
+    data_channel: DataChannel,
+    net_channel: NetChannel,
+    #[cfg(feature = "collective-consistency")]
+    consistency_channel: ConsistencyCheckChannel,
     counters: HashMap<(MessageKind, MessageDatatype, CounterKey), MessageID>,
     #[cfg(feature = "statistics")]
     network_statistics: NetworkStatistics,
@@ -127,6 +132,21 @@ impl QueueState
         let key = message.hash(senders, receivers).as_ref().try_into().unwrap();
 
         self.update_counter(Message::KIND, message.datatype(), key)
+    }
+
+    #[cfg(feature = "collective-consistency")]
+    async fn check_consistency(&mut self, check: metadata::ConsistencyCheck)
+    {
+        self.consistency_channel.send(ConsistencyCheckCommand::Request(check)).await.expect("Consistency check unavailable");
+    }
+
+    #[cfg(feature = "collective-consistency")]
+    async fn ensure_consistency(&mut self) -> Result<(), ReceiveError>
+    {
+        let (send_answer, receive_answer) = tokio::sync::oneshot::channel();
+        self.consistency_channel.send(ConsistencyCheckCommand::Wait(send_answer)).await.expect("Consistency check unavailable");
+        receive_answer.await??;
+        Ok(())
     }
 
     async fn send_message(net_channel: tokio::sync::mpsc::Sender<NetCommand>, message: metadata::Message, data: ReadData) -> Result<(), SendError>
@@ -190,6 +210,11 @@ impl QueueState
     pub(crate) async fn multi_broadcast(&mut self, handle: &Handle, messages: Vec<Broadcast>, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         assert_eq!(messages.len(), data.len());
+        #[cfg(feature = "collective-consistency")]
+        if messages.iter().any(|message| message.sender == self.id)
+        {
+            self.ensure_consistency().await?;
+        }
         #[cfg(feature = "statistics")]
         {
             self.network_statistics.rounds += 1;
@@ -203,14 +228,21 @@ impl QueueState
 
             if message.sender == id
             {
-                for &party in communicator.iter().filter(|&&party| party != id)
+                for &receiver in communicator.iter().filter(|&&party| party != id)
                 {
-                    let message = message.to_message(id, party, message_id);
+                    let message = message.to_message(id, receiver, message_id);
                     self.send_on(&mut tasks, handle, message, data);
                 }
             }
             else
             {
+                #[cfg(feature = "collective-consistency")]
+                {
+                    let receivers = communicator.iter().filter(|&&party| party != id && party != message.sender).copied().collect();
+                    let check = (&message).to_consistency_check(message.sender, receivers, message_id);
+                    self.check_consistency(check).await;
+                }
+
                 let message = message.to_message(message.sender, id, message_id);
                 self.receive_on(&mut tasks, handle, message, data);
             }
@@ -226,6 +258,11 @@ impl QueueState
     pub(crate) async fn multi_gather(&mut self, handle: &Handle, messages: Vec<Gather>, communicator: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         assert_eq!(messages.len(), data.outer_extent());
+        #[cfg(feature = "collective-consistency")]
+        if messages.iter().any(|message| message.receiver != self.id)
+        {
+            self.ensure_consistency().await?;
+        }
         #[cfg(feature = "statistics")]
         {
             self.network_statistics.rounds += 1;
@@ -278,6 +315,11 @@ impl QueueState
         assert_eq!(messages.len(), data.outer_extent());
         assert!(senders.is_subset(receivers));
         assert!(receivers.contains(&self.id));
+        #[cfg(feature = "collective-consistency")]
+        if senders.iter().any(|&sender| sender == self.id)
+        {
+            self.ensure_consistency().await?;
+        }
         #[cfg(feature = "statistics")]
         {
             self.network_statistics.rounds += 1;
@@ -289,19 +331,26 @@ impl QueueState
         {
             let message_id = self.extended_next_message_id(&message, senders, receivers);
 
-            for (&party, &data) in senders.iter().zip(data)
+            for (&sender, &data) in senders.iter().zip(data)
             {
-                if party == id
+                if sender == id
                 {
-                    for &party in receivers.iter().filter(|&&party| party != id)
+                    for &receiver in receivers.iter().filter(|&&party| party != id)
                     {
-                        let message = message.to_message(id, party, message_id);
+                        let message = message.to_message(sender, receiver, message_id);
                         self.send_on(&mut tasks, handle, message, data);
                     }
                 }
                 else
                 {
-                    let message = message.to_message(party, id, message_id);
+                    #[cfg(feature = "collective-consistency")]
+                    {
+                        let receivers = receivers.iter().filter(|&&party| party != id && party != sender).copied().collect();
+                        let check = (&message).to_consistency_check(sender, receivers, message_id);
+                        self.check_consistency(check).await;
+                    }
+
+                    let message = message.to_message(sender, id, message_id);
                     self.receive_on(&mut tasks, handle, message, data);
                 }
             }
@@ -322,6 +371,8 @@ impl QueueState
         assert_eq!(messages.len(), send_data.outer_extent());
         assert_eq!(messages.len(), receive_data.outer_extent());
         assert!(communicator.contains(&self.id));
+        #[cfg(feature = "collective-consistency")]
+        self.ensure_consistency().await?;
         #[cfg(feature = "statistics")]
         {
             self.network_statistics.rounds += 1;
@@ -390,22 +441,42 @@ impl Queue
 
         let (net_channel, receive_channel) = tokio::sync::mpsc::channel(CHANNEL_CAPACITY);
 
+        #[cfg(feature = "collective-consistency")]
+        let consistency_channel =
+        {
+            let (consistency_channel, receive_channel) = tokio::sync::mpsc::channel(CHANNEL_CAPACITY);
+
+            // thread to handle consistency checks
+            runtime.spawn(consistency::run(id, config.clone(), receive_channel, net_channel.clone()));
+
+            consistency_channel
+        };
+
         // thread to handle receiving data
         // spawns new threads for each connection
-        runtime.spawn(server::run(id, config.clone(), data_channel.clone()));
+        runtime.spawn(server::run(id, config.clone(), data_channel.clone(), #[cfg(feature = "collective-consistency")] consistency_channel.clone()));
 
         // thread to handle sending data
         // spawns new threads for each connection
         runtime.spawn(client::run(id, config, receive_channel));
 
-        #[cfg(not(feature = "statistics"))]
-        {
-            Ok(Self { runtime, state: QueueState { id, data_channel, net_channel, counters: HashMap::new() } })
-        }
-        #[cfg(feature = "statistics")]
-        {
-            Ok(Self { runtime, state: QueueState { id, data_channel, net_channel, counters: HashMap::new(), network_statistics: NetworkStatistics::new() } })
-        }
+        Ok(
+            Self
+            {
+                runtime,
+                state: QueueState
+                {
+                    id,
+                    data_channel,
+                    net_channel,
+                    #[cfg(feature = "collective-consistency")]
+                    consistency_channel,
+                    counters: HashMap::new(),
+                    #[cfg(feature = "statistics")]
+                    network_statistics: NetworkStatistics::new(),
+                }
+            }
+        )
     }
 
     pub fn id(&self) -> PartyID
@@ -573,9 +644,23 @@ impl Queue
         self.runtime.block_on(self.state.multi_all_to_all(self.runtime.handle(), messages, communicator, send_data, receive_data))
     }
 
+    #[cfg(feature = "collective-consistency")]
+    pub fn wait(&mut self) -> Result<(), SendReceiveError>
+    {
+        self.runtime.block_on(self.state.ensure_consistency()).map_err(Into::into)
+    }
+
     #[cfg(feature = "statistics")]
     pub fn network_statistics(&mut self) -> NetworkStatistics
     {
         self.state.network_statistics
+    }
+}
+#[cfg(feature = "collective-consistency")]
+impl Drop for Queue
+{
+    fn drop(&mut self)
+    {
+        self.runtime.block_on(self.state.ensure_consistency()).unwrap()
     }
 }
