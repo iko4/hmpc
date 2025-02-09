@@ -316,9 +316,9 @@ After version 0, the version number will be incremented once the format changes.
 ### Feature Flags
 
 [Features](features.md) that change the message format are indicated by bits of this metadata member.
-Currently, ["sessions"](features.md#sessions) and ["signing"](features.md#signing) are features that change the networking behavior.
+Currently, ["sessions"](features.md#sessions) and ["signing"](features.md#signing) are features that change the networking behavior, in particular the message format.
 The bits of this member indicate if the feature is enabled (`1`) or not (`0`).
-The feature bits are the following (in order);
+The feature bits are the following (in order, lowest to highest);
 
 1. ["sessions" feature](features.md#sessions)
 2. ["signing" feature](features.md#signing)
@@ -328,6 +328,9 @@ The feature bits are the following (in order);
 6. reserved for future use
 7. reserved for future use
 8. reserved for future use
+
+Note: The ["collective-consistency" feature](features.md#collective-consistency) does not set a feature flag, as the message format stays the same.
+Additional messages for consistency checks are indicated by special values for the [message kind](#message-kind).
 
 ### Message Kind
 
