@@ -1,9 +1,9 @@
 #pragma once
 
 #include <hmpc/comp/accessor.hpp>
-#include <hmpc/shape.hpp>
 #include <hmpc/detail/type_tag.hpp>
 #include <hmpc/expr/expression.hpp>
+#include <hmpc/shape.hpp>
 
 #define HMPC_BINARY_EXPRESSION(NAME, OP) \
     namespace traits \

@@ -1,7 +1,7 @@
 #include "catch_helpers.hpp"
 
-#include <hmpc/index.hpp>
 #include <hmpc/constants.hpp>
+#include <hmpc/index.hpp>
 
 TEST_CASE("Index", "[shape][index]")
 {

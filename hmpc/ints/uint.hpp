@@ -1,8 +1,8 @@
 #pragma once
 
-#include <hmpc/detail/utility.hpp>
 #include <hmpc/core/bit_span.hpp>
 #include <hmpc/core/num/convert.hpp>
+#include <hmpc/detail/utility.hpp>
 #include <hmpc/ints/num/add.hpp>
 #include <hmpc/ints/num/bit_and.hpp>
 #include <hmpc/ints/num/bit_not.hpp>

@@ -15,84 +15,84 @@ namespace hmpc::ffi
     {
         switch (errc)
         {
-            case SendReceiveErrc::ok:
-                throw std::logic_error("Ok is not an error");
-            case SendReceiveErrc::invalid_handle:
-                throw std::invalid_argument("handle");
-            case SendReceiveErrc::invalid_pointer:
-                throw std::invalid_argument("pointer");
-            case SendReceiveErrc::invalid_size:
-                throw std::invalid_argument("size");
-            case SendReceiveErrc::invalid_communicator:
-                throw std::invalid_argument("communicator");
-            case SendReceiveErrc::invalid_metadata:
-                throw std::invalid_argument("metadata");
-            case SendReceiveErrc::version_mismatch:
-                throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "version mismatch");
-            case SendReceiveErrc::feature_mismatch:
-                throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "feature mismatch");
-            case SendReceiveErrc::channel_could_not_receive:
-                throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "cannot receive on channel");
-            case SendReceiveErrc::channel_could_not_send:
-                throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "cannot send on channel");
-            case SendReceiveErrc::connection_version_mismatch:
-                throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "connection version mismatch");
-            case SendReceiveErrc::connection_transport_error:
-                throw std::system_error(std::make_error_code(std::errc::protocol_error), "transport error");
-            case SendReceiveErrc::connection_closed:
-                throw std::system_error(std::make_error_code(std::errc::connection_reset), "connection closed");
-            case SendReceiveErrc::connection_reset:
-                throw std::system_error(std::make_error_code(std::errc::connection_reset), "connection reset");
-            case SendReceiveErrc::connection_timed_out:
-                throw std::system_error(std::make_error_code(std::errc::timed_out), "connection timed out");
-            case SendReceiveErrc::connection_locally_closed:
-                throw std::system_error(std::make_error_code(std::errc::connection_reset), "connection locally closed");
-            case SendReceiveErrc::connections_exhausted:
-                throw std::domain_error("connection identifiers");
-            case SendReceiveErrc::application_closed:
-                throw std::system_error(std::make_error_code(std::errc::connection_reset), "application closed");
-            case SendReceiveErrc::stream_finished_early:
-                throw std::system_error(std::make_error_code(std::errc::message_size), "stream finished early");
-            case SendReceiveErrc::stream_reset:
-                throw std::system_error(std::make_error_code(std::errc::connection_reset), "stream reset");
-            case SendReceiveErrc::stream_stopped:
-                throw std::system_error(std::make_error_code(std::errc::connection_reset), "stream stopped");
-            case SendReceiveErrc::stream_closed:
-                throw std::system_error(std::make_error_code(std::errc::connection_refused), "stream closed");
-            case SendReceiveErrc::stream_illegal_ordered_read:
-                throw std::system_error(std::make_error_code(std::errc::operation_not_permitted), "stream illegal ordered read");
-            case SendReceiveErrc::stream_rejected:
-                throw std::system_error(std::make_error_code(std::errc::connection_refused), "stream rejected");
-            case SendReceiveErrc::stream_too_long:
-                throw std::system_error(std::make_error_code(std::errc::message_size), "stream too long");
-            case SendReceiveErrc::invalid_enum_value:
-                throw std::domain_error("enum");
-            case SendReceiveErrc::size_mismatch:
-                throw std::system_error(std::make_error_code(std::errc::message_size), "size mismatch");
-            case SendReceiveErrc::task_cancelled:
-                throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "task cancelled");
-            case SendReceiveErrc::task_panicked:
-                throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "task panicked");
-            case SendReceiveErrc::multiple_errors:
-                throw std::runtime_error("multiple errors");
-            case SendReceiveErrc::session_mismatch:
-                throw std::runtime_error("session ID mismatch");
-            case SendReceiveErrc::signature_verification:
-                throw std::runtime_error("signature verification failed");
-            case SendReceiveErrc::unknown_sender:
-                throw std::runtime_error("unknown sender");
-            case SendReceiveErrc::multiple_checks:
-                throw std::runtime_error("multiple checks");
-            case SendReceiveErrc::multiple_requests:
-                throw std::runtime_error("multiple requests");
-            case SendReceiveErrc::multiple_messages:
-                throw std::runtime_error("multiple messages");
-            case SendReceiveErrc::unknown_check:
-                throw std::runtime_error("unknown check");
-            case SendReceiveErrc::inconsistent_signature_verification:
-                throw std::runtime_error("signature verification failed (consistency check)");
-            case SendReceiveErrc::inconsistent_collective_communication:
-                throw std::runtime_error("inconsistent collective communication");
+        case SendReceiveErrc::ok:
+            throw std::logic_error("Ok is not an error");
+        case SendReceiveErrc::invalid_handle:
+            throw std::invalid_argument("handle");
+        case SendReceiveErrc::invalid_pointer:
+            throw std::invalid_argument("pointer");
+        case SendReceiveErrc::invalid_size:
+            throw std::invalid_argument("size");
+        case SendReceiveErrc::invalid_communicator:
+            throw std::invalid_argument("communicator");
+        case SendReceiveErrc::invalid_metadata:
+            throw std::invalid_argument("metadata");
+        case SendReceiveErrc::version_mismatch:
+            throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "version mismatch");
+        case SendReceiveErrc::feature_mismatch:
+            throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "feature mismatch");
+        case SendReceiveErrc::channel_could_not_receive:
+            throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "cannot receive on channel");
+        case SendReceiveErrc::channel_could_not_send:
+            throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "cannot send on channel");
+        case SendReceiveErrc::connection_version_mismatch:
+            throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "connection version mismatch");
+        case SendReceiveErrc::connection_transport_error:
+            throw std::system_error(std::make_error_code(std::errc::protocol_error), "transport error");
+        case SendReceiveErrc::connection_closed:
+            throw std::system_error(std::make_error_code(std::errc::connection_reset), "connection closed");
+        case SendReceiveErrc::connection_reset:
+            throw std::system_error(std::make_error_code(std::errc::connection_reset), "connection reset");
+        case SendReceiveErrc::connection_timed_out:
+            throw std::system_error(std::make_error_code(std::errc::timed_out), "connection timed out");
+        case SendReceiveErrc::connection_locally_closed:
+            throw std::system_error(std::make_error_code(std::errc::connection_reset), "connection locally closed");
+        case SendReceiveErrc::connections_exhausted:
+            throw std::domain_error("connection identifiers");
+        case SendReceiveErrc::application_closed:
+            throw std::system_error(std::make_error_code(std::errc::connection_reset), "application closed");
+        case SendReceiveErrc::stream_finished_early:
+            throw std::system_error(std::make_error_code(std::errc::message_size), "stream finished early");
+        case SendReceiveErrc::stream_reset:
+            throw std::system_error(std::make_error_code(std::errc::connection_reset), "stream reset");
+        case SendReceiveErrc::stream_stopped:
+            throw std::system_error(std::make_error_code(std::errc::connection_reset), "stream stopped");
+        case SendReceiveErrc::stream_closed:
+            throw std::system_error(std::make_error_code(std::errc::connection_refused), "stream closed");
+        case SendReceiveErrc::stream_illegal_ordered_read:
+            throw std::system_error(std::make_error_code(std::errc::operation_not_permitted), "stream illegal ordered read");
+        case SendReceiveErrc::stream_rejected:
+            throw std::system_error(std::make_error_code(std::errc::connection_refused), "stream rejected");
+        case SendReceiveErrc::stream_too_long:
+            throw std::system_error(std::make_error_code(std::errc::message_size), "stream too long");
+        case SendReceiveErrc::invalid_enum_value:
+            throw std::domain_error("enum");
+        case SendReceiveErrc::size_mismatch:
+            throw std::system_error(std::make_error_code(std::errc::message_size), "size mismatch");
+        case SendReceiveErrc::task_cancelled:
+            throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "task cancelled");
+        case SendReceiveErrc::task_panicked:
+            throw std::system_error(std::make_error_code(std::future_errc::broken_promise), "task panicked");
+        case SendReceiveErrc::multiple_errors:
+            throw std::runtime_error("multiple errors");
+        case SendReceiveErrc::session_mismatch:
+            throw std::runtime_error("session ID mismatch");
+        case SendReceiveErrc::signature_verification:
+            throw std::runtime_error("signature verification failed");
+        case SendReceiveErrc::unknown_sender:
+            throw std::runtime_error("unknown sender");
+        case SendReceiveErrc::multiple_checks:
+            throw std::runtime_error("multiple checks");
+        case SendReceiveErrc::multiple_requests:
+            throw std::runtime_error("multiple requests");
+        case SendReceiveErrc::multiple_messages:
+            throw std::runtime_error("multiple messages");
+        case SendReceiveErrc::unknown_check:
+            throw std::runtime_error("unknown check");
+        case SendReceiveErrc::inconsistent_signature_verification:
+            throw std::runtime_error("signature verification failed (consistency check)");
+        case SendReceiveErrc::inconsistent_collective_communication:
+            throw std::runtime_error("inconsistent collective communication");
         }
     }
 }

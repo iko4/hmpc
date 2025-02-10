@@ -1,11 +1,11 @@
 #include "catch_helpers.hpp"
 
 #include <hmpc/comp/accessor.hpp>
-#include <hmpc/comp/tensor.hpp>
 #include <hmpc/comp/queue.hpp>
+#include <hmpc/comp/tensor.hpp>
+#include <hmpc/core/size_limb_span.hpp>
 #include <hmpc/expr/bit_monomial.hpp>
 #include <hmpc/expr/tensor.hpp>
-#include <hmpc/core/size_limb_span.hpp>
 
 TEST_CASE("Monomial multiplication", "[ints][poly]")
 {

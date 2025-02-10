@@ -1,7 +1,7 @@
 #pragma once
 
-#include <hmpc/shape.hpp>
 #include <hmpc/detail/tuple.hpp>
+#include <hmpc/shape.hpp>
 #include <hmpc/value.hpp>
 
 namespace hmpc

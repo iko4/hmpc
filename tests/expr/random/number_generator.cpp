@@ -1,8 +1,8 @@
 #include "catch_helpers.hpp"
 
 #include <hmpc/comp/queue.hpp>
-#include <hmpc/expr/random/uniform_from_number_generator.hpp>
 #include <hmpc/expr/binary_expression.hpp>
+#include <hmpc/expr/random/uniform_from_number_generator.hpp>
 #include <hmpc/expr/tensor.hpp>
 #include <hmpc/ints/literals.hpp>
 #include <hmpc/ints/poly_mod.hpp>

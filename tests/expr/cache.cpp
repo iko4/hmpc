@@ -2,10 +2,10 @@
 
 #include <hmpc/comp/tensor.hpp>
 #include <hmpc/expr/binary_expression.hpp>
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/cache.hpp>
 #include <hmpc/expr/number_theoretic_transform.hpp>
 #include <hmpc/expr/random/binomial.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/ints/poly_mod.hpp>
 #include <hmpc/ints/uint.hpp>
 

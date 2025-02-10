@@ -182,13 +182,13 @@ struct HMPC_FMTLIB::formatter<hmpc::comp::device_info, Char>
 
         switch (type)
         {
-            case hmpc::comp::device_type::cpu:
-                return "CPU"sv;
-            case hmpc::comp::device_type::gpu:
-                return "GPU"sv;
-            default:
-            case hmpc::comp::device_type::unknown:
-                return "unknown"sv;
+        case hmpc::comp::device_type::cpu:
+            return "CPU"sv;
+        case hmpc::comp::device_type::gpu:
+            return "GPU"sv;
+        default:
+        case hmpc::comp::device_type::unknown:
+            return "unknown"sv;
         }
     }
 

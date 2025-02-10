@@ -1,9 +1,9 @@
 #include "catch_helpers.hpp"
 
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/number_theoretic_transform.hpp>
-#include <hmpc/ints/poly_mod.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/ints/literals.hpp>
+#include <hmpc/ints/poly_mod.hpp>
 
 TEST_CASE("Integer polynomials modulo", "[ints][poly][mod]")
 {

@@ -2,8 +2,8 @@
 
 #include <hmpc/core/uint.hpp>
 #include <hmpc/ints/bigint.hpp>
-#include <hmpc/ints/mod.hpp>
 #include <hmpc/ints/literals.hpp>
+#include <hmpc/ints/mod.hpp>
 
 TEST_CASE("Integers modulo")
 {

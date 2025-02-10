@@ -1,8 +1,8 @@
 #include "catch_helpers.hpp"
 
 #include <hmpc/comp/queue.hpp>
-#include <hmpc/expr/crypto/lhe/enc.hpp>
 #include <hmpc/expr/crypto/lhe/dec.hpp>
+#include <hmpc/expr/crypto/lhe/enc.hpp>
 #include <hmpc/expr/value.hpp>
 #include <hmpc/ints/literals.hpp>
 #include <hmpc/ints/poly_mod.hpp>
@@ -13,8 +13,8 @@ TEST_CASE("Linear BGV", "[expr][crypto][lhe]")
 {
     using namespace hmpc::ints::literals;
 
-    constexpr auto p = 0x8822'd806'2332'0001_int; // 9809640459238244353
-    constexpr auto q = 0x5'91f5'b834'c0d96'1f67'343b'cc89'02bd'eda2'771f'5430'6ff1'5116'2ff8'd2b4'0f41'94dc'0001_int; // 676310504550516370745208338938566342426856908484397554505023779011987369401721290753
+    constexpr auto p = 0x8822'd806'2332'0001_int;                                                                     // 9809640459238244353
+    constexpr auto q = 0x59'1f5b'834c'0d96'1f67'343b'cc89'02bd'eda2'771f'5430'6ff1'5116'2ff8'd2b4'0f41'94dc'0001_int; // 676310504550516370745208338938566342426856908484397554505023779011987369401721290753
     constexpr auto N = hmpc::size{1} << 16;
 
     using Rq = hmpc::ints::poly_mod<q, N, hmpc::ints::coefficient_representation>;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hmpc/config.hpp>
+#include <hmpc/constant.hpp>
 
 namespace hmpc
 {

@@ -2,8 +2,8 @@
 
 #include <hmpc/net/ffi.hpp>
 
-#include <array>
 #include <algorithm>
+#include <array>
 
 namespace hmpc::net
 {
@@ -30,7 +30,7 @@ namespace hmpc::net
 
     namespace detail
     {
-        template<party_id...Parties>
+        template<party_id... Parties>
         constexpr auto to_ffi(communicator<Parties...>) noexcept
         {
             static constexpr std::array<party_id, sizeof...(Parties)> parties = { Parties... };

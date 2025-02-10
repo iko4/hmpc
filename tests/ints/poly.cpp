@@ -1,12 +1,12 @@
 #include "catch_helpers.hpp"
 
 #include <hmpc/comp/accessor.hpp>
-#include <hmpc/comp/tensor.hpp>
 #include <hmpc/comp/queue.hpp>
+#include <hmpc/comp/tensor.hpp>
 #include <hmpc/expr/binary_expression.hpp>
 #include <hmpc/expr/tensor.hpp>
-#include <hmpc/ints/poly.hpp>
 #include <hmpc/ints/numeric.hpp>
+#include <hmpc/ints/poly.hpp>
 
 TEST_CASE("Integer polynomials", "[ints][poly]")
 {

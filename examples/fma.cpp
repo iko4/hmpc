@@ -1,7 +1,7 @@
 #include <hmpc/comp/accessor.hpp>
 #include <hmpc/comp/tensor.hpp>
-#include <hmpc/ints/mod.hpp>
 #include <hmpc/ints/literals.hpp>
+#include <hmpc/ints/mod.hpp>
 
 #include <fmt/format.h>
 #include <sycl/sycl.hpp>

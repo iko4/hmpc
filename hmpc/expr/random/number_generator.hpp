@@ -1,8 +1,8 @@
 #pragma once
 
-#include <hmpc/shape.hpp>
 #include <hmpc/core/size_limb_span.hpp>
 #include <hmpc/ints/num/bit_copy.hpp>
+#include <hmpc/shape.hpp>
 
 namespace hmpc::expr::random
 {

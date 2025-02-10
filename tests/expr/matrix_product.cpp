@@ -2,8 +2,8 @@
 
 #include <hmpc/comp/accessor.hpp>
 #include <hmpc/comp/queue.hpp>
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/matrix_product.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/ints/bigint.hpp>
 
 TEST_CASE("Matrix product", "[expr][matmul]")

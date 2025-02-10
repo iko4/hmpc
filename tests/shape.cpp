@@ -1,8 +1,8 @@
 #include "catch_helpers.hpp"
 
+#include <hmpc/comp/vector.hpp>
 #include <hmpc/index.hpp>
 #include <hmpc/shape.hpp>
-#include <hmpc/comp/vector.hpp>
 
 TEST_CASE("Shape", "[shape]")
 {

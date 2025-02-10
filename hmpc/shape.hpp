@@ -1,10 +1,10 @@
 #pragma once
 
-#include <hmpc/detail/constant_list.hpp>
 #include <hmpc/core/mdsize.hpp>
 #include <hmpc/core/multiply.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/detail/constant_list.hpp>
 #include <hmpc/iter/for_packed_range.hpp>
+#include <hmpc/iter/for_range.hpp>
 #include <hmpc/iter/scan_range.hpp>
 #include <hmpc/value.hpp>
 
@@ -61,7 +61,7 @@ namespace hmpc
                 hmpc::iter::for_range<rank>([&](auto i)
                 {
                     constexpr auto e = hmpc::core::mdsize<Extents...>::extent(i);
-                    if constexpr(e != hmpc::dynamic_extent and e != hmpc::placeholder_extent)
+                    if constexpr (e != hmpc::dynamic_extent and e != hmpc::placeholder_extent)
                     {
                         size *= e;
                     }

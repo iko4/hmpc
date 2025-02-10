@@ -1,8 +1,8 @@
 #pragma once
 
-#include <hmpc/shape.hpp>
 #include <hmpc/expr/expression.hpp>
 #include <hmpc/ints/integer_traits.hpp>
+#include <hmpc/shape.hpp>
 
 namespace hmpc::reduction
 {

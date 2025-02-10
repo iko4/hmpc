@@ -1,7 +1,7 @@
 #pragma once
 
-#include <hmpc/crypto/chacha.hpp>
 #include <hmpc/core/bit_span.hpp>
+#include <hmpc/crypto/chacha.hpp>
 
 namespace hmpc::random
 {

@@ -1,18 +1,18 @@
 #pragma once
 
-#include <hmpc/expr/crypto/lhe/ciphertext.hpp>
-#include <hmpc/expr/crypto/lhe/key.hpp>
-#include <hmpc/expr/crypto/lhe/randomness.hpp>
 #include <hmpc/constant.hpp>
-#include <hmpc/typing/reference.hpp>
 #include <hmpc/detail/unique_tag.hpp>
-#include <hmpc/expr/expression.hpp>
 #include <hmpc/expr/binary_expression.hpp>
 #include <hmpc/expr/cast.hpp>
 #include <hmpc/expr/constant.hpp>
-#include <hmpc/expr/tensor.hpp>
+#include <hmpc/expr/crypto/lhe/ciphertext.hpp>
+#include <hmpc/expr/crypto/lhe/key.hpp>
+#include <hmpc/expr/crypto/lhe/randomness.hpp>
+#include <hmpc/expr/expression.hpp>
 #include <hmpc/expr/number_theoretic_transform.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/unsqueeze.hpp>
+#include <hmpc/typing/reference.hpp>
 
 namespace hmpc::expr::crypto::lhe
 {

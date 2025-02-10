@@ -1,10 +1,10 @@
 #pragma once
 
-#include <hmpc/shape.hpp>
 #include <hmpc/detail/constant_list.hpp>
 #include <hmpc/iter/for_range.hpp>
 #include <hmpc/iter/scan_range.hpp>
 #include <hmpc/iter/scan_reverse_range.hpp>
+#include <hmpc/shape.hpp>
 
 #include <tuple>
 

@@ -1,11 +1,11 @@
 #include "catch_helpers.hpp"
 
 #include <hmpc/comp/accessor.hpp>
-#include <hmpc/comp/tensor.hpp>
 #include <hmpc/comp/queue.hpp>
+#include <hmpc/comp/tensor.hpp>
 #include <hmpc/expr/binary_expression.hpp>
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/reduce.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/ints/uint.hpp>
 
 TEST_CASE("Reduction", "[expr][reduce]")

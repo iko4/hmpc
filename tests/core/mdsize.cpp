@@ -1,7 +1,7 @@
 #include "catch_helpers.hpp"
 
-#include <hmpc/core/mdsize.hpp>
 #include <hmpc/constants.hpp>
+#include <hmpc/core/mdsize.hpp>
 
 TEST_CASE("Multidimensional size", "[core][mdsize]")
 {

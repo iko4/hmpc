@@ -1,14 +1,14 @@
 #include <hmpc/comp/accessor.hpp>
-#include <hmpc/comp/tensor.hpp>
 #include <hmpc/comp/queue.hpp>
+#include <hmpc/comp/tensor.hpp>
 #include <hmpc/expr/binary_expression.hpp>
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/constant.hpp>
 #include <hmpc/expr/number_theoretic_transform.hpp>
 #include <hmpc/expr/random/binomial.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/unsqueeze.hpp>
-#include <hmpc/ints/poly_mod.hpp>
 #include <hmpc/ints/literals.hpp>
+#include <hmpc/ints/poly_mod.hpp>
 #include <hmpc/random/binomial.hpp>
 #include <hmpc/random/number_generator.hpp>
 

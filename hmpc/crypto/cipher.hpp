@@ -1,8 +1,8 @@
 #pragma once
 
-#include <hmpc/random/number_generator.hpp>
-#include <hmpc/core/num/bit_xor.hpp>
 #include <hmpc/core/converting_limb_span.hpp>
+#include <hmpc/core/num/bit_xor.hpp>
+#include <hmpc/random/number_generator.hpp>
 
 namespace hmpc::crypto
 {

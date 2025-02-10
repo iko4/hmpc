@@ -2,8 +2,6 @@
 
 #include <hmpc/access.hpp>
 #include <hmpc/constants.hpp>
-#include <hmpc/detail/constant_list.hpp>
-#include <hmpc/detail/utility.hpp>
 #include <hmpc/core/bit_not.hpp>
 #include <hmpc/core/bit_span_metadata.hpp>
 #include <hmpc/core/bit_width.hpp>
@@ -13,6 +11,8 @@
 #include <hmpc/core/extract_bit.hpp>
 #include <hmpc/core/is_normal.hpp>
 #include <hmpc/core/limb_span.hpp>
+#include <hmpc/detail/constant_list.hpp>
+#include <hmpc/detail/utility.hpp>
 #include <hmpc/iter/scan_reverse_range.hpp>
 
 namespace hmpc

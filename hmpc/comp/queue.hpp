@@ -1,14 +1,14 @@
 #pragma once
 
 #include <hmpc/comp/accessor.hpp>
-#include <hmpc/index.hpp>
+#include <hmpc/comp/device.hpp>
+#include <hmpc/core/size_limb_span.hpp>
 #include <hmpc/detail/hash.hpp>
-#include <hmpc/detail/utility.hpp>
 #include <hmpc/detail/random.hpp>
+#include <hmpc/detail/utility.hpp>
 #include <hmpc/expr/cache.hpp>
 #include <hmpc/expr/expression.hpp>
-#include <hmpc/core/size_limb_span.hpp>
-#include <hmpc/comp/device.hpp>
+#include <hmpc/index.hpp>
 #include <hmpc/ints/num/bit_copy.hpp>
 #include <hmpc/random/number_generator.hpp>
 
@@ -26,7 +26,7 @@ namespace hmpc::comp
 {
     namespace detail
     {
-        constexpr auto call_packed(const auto& f, hmpc::expression auto e)
+        constexpr auto call_packed(auto const& f, hmpc::expression auto e)
         {
             return f(e);
         }
@@ -43,7 +43,7 @@ namespace hmpc::comp
         // forward-declare to make all options available below
         constexpr auto call_packed(auto const& f, hmpc::expression_tuple auto e, auto... rest);
 
-        constexpr auto call_packed(const auto& f, hmpc::expression auto e, auto... rest)
+        constexpr auto call_packed(auto const& f, hmpc::expression auto e, auto... rest)
         {
             return call_packed(
                 [&](auto... args)
@@ -557,12 +557,12 @@ namespace hmpc::comp
             {
                 switch (type)
                 {
-                    case sycl::info::device_type::cpu:
-                        return hmpc::comp::device_type::cpu;
-                    case sycl::info::device_type::gpu:
-                        return hmpc::comp::device_type::gpu;
-                    default:
-                        return hmpc::comp::device_type::unknown;
+                case sycl::info::device_type::cpu:
+                    return hmpc::comp::device_type::cpu;
+                case sycl::info::device_type::gpu:
+                    return hmpc::comp::device_type::gpu;
+                default:
+                    return hmpc::comp::device_type::unknown;
                 }
             };
 

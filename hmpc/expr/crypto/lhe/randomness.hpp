@@ -1,15 +1,15 @@
 #pragma once
 
 #include <hmpc/comp/crypto/lhe/randomness.hpp>
-#include <hmpc/ints/poly.hpp>
 #include <hmpc/detail/unique_tag.hpp>
 #include <hmpc/expr/expression.hpp>
 #include <hmpc/expr/number_theoretic_transform.hpp>
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/random/binomial.hpp>
 #include <hmpc/expr/random/binomial_from_number_generator.hpp>
 #include <hmpc/expr/random/uniform.hpp>
 #include <hmpc/expr/random/uniform_from_number_generator.hpp>
+#include <hmpc/expr/tensor.hpp>
+#include <hmpc/ints/poly.hpp>
 
 namespace hmpc::expr::crypto::lhe
 {

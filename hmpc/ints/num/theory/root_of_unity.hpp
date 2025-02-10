@@ -1,7 +1,7 @@
 #pragma once
 
-#include <hmpc/ints/mod.hpp>
 #include <hmpc/ints/integer_traits.hpp>
+#include <hmpc/ints/mod.hpp>
 #include <hmpc/random/number_generator.hpp>
 
 namespace hmpc::ints::num::theory

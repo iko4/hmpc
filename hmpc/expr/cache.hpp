@@ -133,7 +133,8 @@ namespace hmpc::expr
                         return trace_expression(
                             std::forward<decltype(traces)>(traces),
                             hmpc::detail::type_list<hmpc::detail::type_triple<E, decltype(E::access(i)), decltype(i)>>{},
-                        expr.get(i));
+                            expr.get(i)
+                        );
                     }, traverse_children());
                 }
                 else
@@ -235,7 +236,8 @@ namespace hmpc::expr
                         std::forward<decltype(cache)>(cache),
                         traces,
                         hmpc::constants::yes,
-                        expr),
+                        expr
+                    ),
                     traces,
                     exprs...
                 );

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <hmpc/config.hpp>
-#include <hmpc/detail/utility.hpp>
-#include <hmpc/expr/binary_expression.hpp>
 #include <hmpc/core/equal_to.hpp>
 #include <hmpc/core/mask_inside.hpp>
 #include <hmpc/core/shift_right.hpp>
+#include <hmpc/detail/utility.hpp>
+#include <hmpc/expr/binary_expression.hpp>
 #include <hmpc/ints/bit_monomial.hpp>
-#include <hmpc/ints/poly.hpp>
 #include <hmpc/ints/integer_traits.hpp>
+#include <hmpc/ints/poly.hpp>
 
 namespace hmpc::expr
 {

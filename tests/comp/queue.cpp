@@ -2,8 +2,8 @@
 
 #include <hmpc/comp/queue.hpp>
 #include <hmpc/expr/binary_expression.hpp>
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/cache.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/ints/uint.hpp>
 
 #include <sycl/sycl.hpp>
@@ -64,12 +64,12 @@ TEST_CASE("Queue", "[comp][expr]")
     CHECK((info.address_bits == 32) bitor (info.address_bits == 64));
     CHECK(info.limits.compute_units >= 1);
     CHECK(info.limits.sub_devices <= info.limits.compute_units);
-    CHECK(info.limits.work_item_dimensions >= 3); // if not custom device
-    CHECK(info.limits.work_item_size_1d >= 1); // if not custom device
-    CHECK(info.limits.work_item_size_2d >= std::array<std::size_t, 2>{1, 1}); // if not custom device
+    CHECK(info.limits.work_item_dimensions >= 3);                                // if not custom device
+    CHECK(info.limits.work_item_size_1d >= 1);                                   // if not custom device
+    CHECK(info.limits.work_item_size_2d >= std::array<std::size_t, 2>{1, 1});    // if not custom device
     CHECK(info.limits.work_item_size_3d >= std::array<std::size_t, 3>{1, 1, 1}); // if not custom device
     CHECK(info.limits.work_group_size >= 1);
     CHECK(info.limits.sub_groups >= 1);
-    CHECK(info.limits.parameter_size >= 1024); // if not custom device
+    CHECK(info.limits.parameter_size >= 1024);         // if not custom device
     CHECK(info.limits.local_memory_size >= 32 * 1000); // if not custom device
 }

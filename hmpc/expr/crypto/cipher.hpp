@@ -1,12 +1,12 @@
 #pragma once
 
-#include <hmpc/config.hpp>
-#include <hmpc/expr/expression.hpp>
-#include <hmpc/expr/cache.hpp>
-#include <hmpc/ints/num/bit_copy.hpp>
-#include <hmpc/core/size_limb_span.hpp>
 #include <hmpc/comp/vector.hpp>
+#include <hmpc/config.hpp>
+#include <hmpc/core/size_limb_span.hpp>
 #include <hmpc/crypto/cipher.hpp>
+#include <hmpc/expr/cache.hpp>
+#include <hmpc/expr/expression.hpp>
+#include <hmpc/ints/num/bit_copy.hpp>
 
 namespace hmpc::expr::crypto
 {

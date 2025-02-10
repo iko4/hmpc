@@ -4,8 +4,8 @@
 #include <hmpc/detail/type_id.hpp>
 #include <hmpc/detail/utility.hpp>
 #include <hmpc/expr/expression.hpp>
-#include <hmpc/ints/poly.hpp>
 #include <hmpc/ints/num/theory/root_of_unity.hpp>
+#include <hmpc/ints/poly.hpp>
 
 namespace hmpc::expr
 {

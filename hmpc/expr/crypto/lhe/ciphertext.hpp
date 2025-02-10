@@ -2,10 +2,10 @@
 
 #include <hmpc/comp/crypto/lhe/ciphertext.hpp>
 #include <hmpc/detail/unique_tag.hpp>
+#include <hmpc/expr/binary_expression.hpp>
 #include <hmpc/expr/expression.hpp>
 #include <hmpc/expr/tensor.hpp>
 #include <hmpc/typing/reference.hpp>
-#include <hmpc/expr/binary_expression.hpp>
 
 namespace hmpc::expr::crypto::lhe
 {

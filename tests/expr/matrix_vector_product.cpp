@@ -3,8 +3,8 @@
 #include <hmpc/comp/accessor.hpp>
 #include <hmpc/comp/queue.hpp>
 #include <hmpc/expr/bit_monomial.hpp>
-#include <hmpc/expr/tensor.hpp>
 #include <hmpc/expr/matrix_vector_product.hpp>
+#include <hmpc/expr/tensor.hpp>
 #include <hmpc/ints/bigint.hpp>
 
 TEST_CASE("Matrix-vector multiplication of polynomials", "[expr][matmul][poly]")

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <hmpc/shape.hpp>
 #include <hmpc/expr/random/number_generator.hpp>
 #include <hmpc/random/number_generator.hpp>
 #include <hmpc/random/uniform.hpp>
+#include <hmpc/shape.hpp>
 #include <hmpc/value.hpp>
 
 namespace hmpc::expr::random
