@@ -32,7 +32,7 @@ pub(crate) trait BaseMessageID
     #[cfg(feature = "collective-consistency")]
     fn to_consistency_check(&self, sender: PartyID, receivers: Communicator, id: MessageID) -> ConsistencyCheck
     {
-        ConsistencyCheck { kind: Self::KIND, datatype: self.datatype(), sender: sender, receivers: receivers, id: id }
+        ConsistencyCheck { kind: Self::KIND, datatype: self.datatype(), sender, receivers, id }
     }
 }
 

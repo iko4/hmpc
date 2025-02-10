@@ -17,7 +17,7 @@ impl ReadData
     #[must_use]
     pub fn new_unchecked(ptr: *const u8) -> Self
     {
-        Self { ptr: ptr }
+        Self { ptr }
     }
 
     #[must_use]

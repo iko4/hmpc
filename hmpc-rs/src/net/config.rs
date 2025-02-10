@@ -16,7 +16,7 @@ use thiserror::Error;
 
 use super::hash::hash;
 #[cfg(feature = "signing")]
-use super::sign::{PublicKey, PrivateKey};
+use super::sign::{PrivateKey, PublicKey};
 use super::{PartyID, SessionID, SESSION_ID_SIZE};
 
 pub type Port = u16;
@@ -158,7 +158,9 @@ impl Session
 {
     pub fn try_from_env() -> Option<Session>
     {
-        env::var(SESSION_ID_VALUE_ENVIRONMENT_VARIABLE).map(Session::Parse).ok()
+        env::var(SESSION_ID_VALUE_ENVIRONMENT_VARIABLE)
+            .map(Session::Parse)
+            .ok()
             .or_else(|| env::var(SESSION_ID_STRING_ENVIRONMENT_VARIABLE).map(Session::String).ok())
     }
 
@@ -179,10 +181,7 @@ impl Session
         match self
         {
             Session::Value(value) => Ok(*value),
-            Session::Parse(s) =>
-            {
-                s.parse()
-            },
+            Session::Parse(s) => s.parse(),
             Session::String(s) =>
             {
                 let digest = hash(s.as_bytes());
@@ -191,8 +190,10 @@ impl Session
                 assert!(digest.len() >= SESSION_ID_SIZE);
 
                 // PANICS: Cannot panic because of above assert (that should always be true for SHA256 and u128)
-                let value = digest.first_chunk::<SESSION_ID_SIZE>()
-                    .map(|bytes| SessionID::from_le_bytes(*bytes)).unwrap();
+                let value = digest
+                    .first_chunk::<SESSION_ID_SIZE>()
+                    .map(|bytes| SessionID::from_le_bytes(*bytes))
+                    .unwrap();
                 Ok(value)
             },
         }
@@ -208,7 +209,7 @@ impl Session
                 let value = self.value()?;
                 *self = Session::Value(value);
                 Ok(self)
-            }
+            },
         }
     }
 }

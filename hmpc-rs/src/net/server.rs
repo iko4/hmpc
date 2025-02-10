@@ -5,15 +5,14 @@ use std::sync::Arc;
 use log::{error, info};
 use quinn::Incoming;
 
-use super::DataChannel;
 use super::config::{Config, DEFAULT_TIMEOUT};
-#[cfg(feature = "sessions")]
-use super::SessionID;
 #[cfg(feature = "signing")]
 use super::sign::PublicKey;
+#[cfg(feature = "sessions")]
+use super::SessionID;
+use super::{make_addr, DataChannel, DataCommand, PartyID, ReceiveMessage};
 #[cfg(feature = "collective-consistency")]
 use super::{ConsistencyCheckChannel, ConsistencyCheckCommand};
-use crate::net::{make_addr, DataCommand, PartyID, ReceiveMessage};
 
 async fn make_server(id: PartyID, config: &Config) -> quinn::Endpoint
 {
@@ -43,8 +42,9 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: Se
             session,
             #[cfg(feature = "signing")]
             &verification_keys,
-            &mut stream
-        ).await
+            &mut stream,
+        )
+        .await
         {
             Ok(message) =>
             {

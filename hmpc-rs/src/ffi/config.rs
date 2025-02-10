@@ -2,7 +2,7 @@ use std::ffi::{c_char, CStr};
 
 use log::{debug, error};
 
-use crate::ffi::{check_mut_pointer, check_pointer, free_nullable, nullable};
+use super::{check_mut_pointer, check_pointer, free_nullable, nullable};
 use crate::net::config::{Config, Session};
 use crate::net::ptr::Nullable;
 

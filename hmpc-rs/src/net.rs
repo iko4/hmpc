@@ -9,31 +9,31 @@ use quinn::{RecvStream, SendStream, WriteError};
 
 mod client;
 pub mod config;
+#[cfg(feature = "collective-consistency")]
+pub(crate) mod consistency;
 pub(crate) mod errors;
 pub(crate) mod hash;
 mod message_buffer;
 pub mod metadata;
-#[cfg(feature = "signing")]
-pub(crate) mod sign;
-#[cfg(feature = "collective-consistency")]
-pub(crate) mod consistency;
 pub mod ptr;
 pub(crate) mod queue;
 mod server;
+#[cfg(feature = "signing")]
+pub(crate) mod sign;
 
 pub use self::config::Config;
-#[cfg(feature = "signing")]
-use self::sign::{PrivateKey, PublicKey, SIGNATURE_SIZE};
-#[cfg(feature = "signing")]
-use self::hash::hash;
-use self::errors::{ClientError, FromPrimitiveError, ServerError};
 #[cfg(feature = "collective-consistency")]
 use self::errors::ConsistencyCheckError;
+use self::errors::{ClientError, FromPrimitiveError, ServerError};
+#[cfg(feature = "signing")]
+use self::hash::hash;
 #[cfg(feature = "collective-consistency")]
 use self::hash::{Hash, HASH_SIZE};
+pub use self::queue::Queue;
 #[cfg(feature = "collective-consistency")]
 use self::sign::Signature;
-pub use self::queue::Queue;
+#[cfg(feature = "signing")]
+use self::sign::{PrivateKey, PublicKey, SIGNATURE_SIZE};
 
 const SESSION_ID_SIZE: usize = 128 / 8; // 128 bit => [u8; 16]
 
@@ -41,6 +41,7 @@ const MESSAGE_SIZE_LIMIT: usize = 2 << 32;
 
 const MESSAGE_FORMAT_VERSION: u8 = 0;
 
+#[rustfmt::skip]
 const MESSAGE_FEATURE_FLAGS: u8 = {
     let session_flag = cfg!(feature = "sessions") as u8;
     let signing_flag = cfg!(feature = "signing") as u8;
@@ -174,7 +175,7 @@ impl MessageKind
         {
             MessageKind::Broadcast => Ok(MessageKind::ConsistencyCheckBroadcast),
             MessageKind::AllGather => Ok(MessageKind::ConsistencyCheckAllGather),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 
@@ -184,7 +185,7 @@ impl MessageKind
         {
             MessageKind::ConsistencyCheckBroadcast => Ok(MessageKind::Broadcast),
             MessageKind::ConsistencyCheckAllGather => Ok(MessageKind::AllGather),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }
@@ -227,7 +228,8 @@ impl SendMessage
                 #[cfg(feature = "sessions")]
                 session.to_le_bytes().as_slice(),
                 hash(data).as_ref(),
-            ].concat();
+            ]
+            .concat();
 
             signing_key.sign(&metadata)
         };
@@ -351,7 +353,11 @@ impl ReceiveMessage
         let (message, signature) = full_message.split_last_chunk::<SIGNATURE_SIZE>()
             .ok_or(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(full_message.len())))?;
 
-        let result = Self::build_from(#[cfg(feature = "sessions")] session, message)?;
+        let result = Self::build_from(
+            #[cfg(feature = "sessions")]
+            session,
+            message,
+        )?;
         let metadata =
         [
             MESSAGE_FORMAT_VERSION.to_le_bytes().as_slice(),
@@ -364,7 +370,8 @@ impl ReceiveMessage
             #[cfg(feature = "sessions")]
             session.to_le_bytes().as_slice(),
             hash(result.data.as_ref()).as_ref(),
-        ].concat();
+        ]
+        .concat();
 
         let sender = if result.metadata.kind.is_consistency_check()
         {
@@ -395,7 +402,11 @@ impl ReceiveMessage
     {
         let message = stream.read_to_end(MESSAGE_SIZE_LIMIT).await?;
 
-        Self::build_from(#[cfg(feature = "sessions")] session, message.as_slice())
+        Self::build_from(
+            #[cfg(feature = "sessions")]
+            session,
+            message.as_slice(),
+        )
     }
 }
 
@@ -417,13 +428,17 @@ impl TryFrom<ReceiveMessage> for ConsistencyCheckMessage
     {
         if value.metadata.kind.is_consistency_check()
         {
-            let (hash, data) = value.data.as_slice().split_first_chunk::<HASH_SIZE>()
+            let (hash, data) = value
+                .data
+                .as_slice()
+                .split_first_chunk::<HASH_SIZE>()
                 .ok_or(ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(value.data.len())))?;
 
-            let signature = data.try_into()
+            let signature = data
+                .try_into()
                 .map_err(|_| ServerError::ReadExact(quinn::ReadExactError::FinishedEarly(data.len())))?;
 
-            Ok(Self {metadata: value.metadata, hash: *hash, signature: signature} )
+            Ok(Self { metadata: value.metadata, hash: *hash, signature })
         }
         else
         {
@@ -441,7 +456,7 @@ impl TryFrom<(&ReceiveMessage, Signature)> for ConsistencyCheckMessage
         let (value, signature) = value;
         if value.metadata.kind.needs_check()
         {
-            Ok(Self{ metadata: value.metadata.clone(), hash: hash(value.data.as_slice()), signature: signature })
+            Ok(Self { metadata: value.metadata.clone(), hash: hash(value.data.as_slice()), signature })
         }
         else
         {
@@ -480,7 +495,7 @@ pub(crate) enum ConsistencyCheckCommand
     /// Received data to check from network
     ReceivedData(ConsistencyCheckMessage),
     /// Wait for all consistency checks to be finished
-    Wait(tokio::sync::oneshot::Sender<Result<(), ConsistencyCheckError>>)
+    Wait(tokio::sync::oneshot::Sender<Result<(), ConsistencyCheckError>>),
 }
 #[cfg(feature = "collective-consistency")]
 type ConsistencyCheckChannel = tokio::sync::mpsc::Sender<ConsistencyCheckCommand>;

@@ -2,13 +2,25 @@ unstable_features = true
 
 brace_style = "AlwaysNextLine"
 control_brace_style = "AlwaysNextLine"
+combine_control_expr = false
+
+fn_params_layout = "Tall"
+fn_single_line = false
+force_explicit_abi = true
+reorder_impl_items = true
+
+format_macro_matchers = false
+format_macro_bodies = false
 
 imports_layout = "Horizontal"
 imports_granularity = "Module"
 group_imports = "StdExternalCrate"
+reorder_imports = true
+reorder_modules = true
 
 blank_lines_upper_bound = 2
 tab_spaces = 4
+newline_style = "Unix"
 
 max_width = 999
 chain_width = 80

@@ -1,10 +1,10 @@
 use quinn::{ConnectionError, ReadError, WriteError};
 
-use crate::net::errors::{ClientError, ReceiveError, SendError, SendReceiveError, ServerError};
-#[cfg(feature = "signing")]
-use crate::net::errors::SignatureError;
 #[cfg(feature = "collective-consistency")]
 use crate::net::errors::ConsistencyCheckError;
+#[cfg(feature = "signing")]
+use crate::net::errors::SignatureError;
+use crate::net::errors::{ClientError, ReceiveError, SendError, SendReceiveError, ServerError};
 
 #[repr(u8)]
 #[derive(Debug)]

@@ -2,8 +2,8 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::path::Path;
 
-use rcgen::{KeyPair, PKCS_ED25519};
 use log::error;
+use rcgen::{KeyPair, PKCS_ED25519};
 
 use super::{verbose_info, verbose_warn};
 
@@ -23,8 +23,8 @@ fn create_signing_files(verification_key_filename: &Path, signing_key_filename: 
     .expect("Could not create verification key directory");
     fs::create_dir_all(
         signing_key_filename
-            .parent().
-            expect("Could not determine singing key directory")
+            .parent()
+            .expect("Could not determine singing key directory"),
     )
     .expect("Could not create singing key directory");
 

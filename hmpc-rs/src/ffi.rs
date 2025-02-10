@@ -116,7 +116,7 @@ macro_rules! free_nullable
     };
 }
 
-pub(crate) use {check_communicator, check_mut_pointer, check_pointer, check_non_null_vec, check_size_eq, check_span, check_vec, free_nullable};
+pub(crate) use {check_communicator, check_mut_pointer, check_non_null_vec, check_pointer, check_size_eq, check_span, check_vec, free_nullable};
 
 fn set_logger()
 {

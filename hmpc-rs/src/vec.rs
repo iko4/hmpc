@@ -66,9 +66,8 @@ impl<T> Default for Vec2d<T>
 
 impl<'a, T> IntoIterator for &'a Vec2d<T>
 {
-    type Item = &'a [T];
-
     type IntoIter = ChunksExact<'a, T>;
+    type Item = &'a [T];
 
     fn into_iter(self) -> Self::IntoIter
     {

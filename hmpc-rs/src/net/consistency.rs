@@ -4,11 +4,11 @@ use std::collections::HashMap;
 use log::{debug, error, warn};
 
 use super::errors::{ConsistencyCheckError, SendError};
-use super::{metadata, Communicator, Config, ConsistencyCheckCommand, ConsistencyCheckMessage, MessageDatatype, MessageID, MessageKind, NetChannel, NetCommand, PartyID, SendMessage, MESSAGE_FEATURE_FLAGS, MESSAGE_FORMAT_VERSION};
-#[cfg(feature = "sessions")]
-use super::SessionID;
 use super::hash::Hash;
 use super::sign::{PublicKey, Signature};
+#[cfg(feature = "sessions")]
+use super::SessionID;
+use super::{metadata, Communicator, Config, ConsistencyCheckCommand, ConsistencyCheckMessage, MessageDatatype, MessageID, MessageKind, NetChannel, NetCommand, PartyID, SendMessage, MESSAGE_FEATURE_FLAGS, MESSAGE_FORMAT_VERSION};
 
 struct ConsistencyCheckData
 {
@@ -78,7 +78,10 @@ impl ConsistencyCheckValue
         }
         if !receivers.is_superset(&self.receivers.keys().copied().collect())
         {
-            self.receivers = receivers.iter().map(|&receiver| (receiver, self.receivers.remove(&receiver).unwrap_or(None))).collect();
+            self.receivers = receivers
+                .iter()
+                .map(|&receiver| (receiver, self.receivers.remove(&receiver).unwrap_or(None)))
+                .collect();
 
             return Err(ConsistencyCheckError::UnknownCheck);
         }
@@ -134,12 +137,12 @@ impl ConsistencyCheckValue
     {
         if !self.registered
         {
-            return Ok(false) // not ready to check
+            return Ok(false); // not ready to check
         }
         let Some(received) = &self.received
         else
         {
-            return Ok(false) // not ready to check
+            return Ok(false); // not ready to check
         };
 
         let mut valid_receivers = Vec::new();
@@ -147,7 +150,14 @@ impl ConsistencyCheckValue
         {
             if let Some(check) = check
             {
-                check_signature(metadata, receiver, check, verification_keys, #[cfg(feature = "sessions")] session)?;
+                check_signature(
+                    metadata,
+                    receiver,
+                    check,
+                    verification_keys,
+                    #[cfg(feature = "sessions")]
+                    session,
+                )?;
 
                 if received.hash != check.hash
                 {
@@ -200,7 +210,8 @@ fn check_signature(metadata: &ConsistencyCheckKey, receiver: PartyID, check: &Co
         #[cfg(feature = "sessions")]
         session.to_le_bytes().as_slice(),
         check.hash.as_slice(),
-    ].concat();
+    ]
+    .concat();
 
     verification_keys.get(&metadata.sender)
         .map_or(Err(ConsistencyCheckError::UnknownSender), Ok)?
@@ -210,7 +221,7 @@ fn check_signature(metadata: &ConsistencyCheckKey, receiver: PartyID, check: &Co
 
 async fn notify_parties<Receivers>(id: PartyID, metadata: &ConsistencyCheckKey, receivers: Receivers, data: &ConsistencyCheckData, net_channel: &NetChannel) -> Result<(), SendError>
 where
-    Receivers: Iterator<Item = PartyID>
+    Receivers: Iterator<Item = PartyID>,
 {
     let buffer = [data.hash.as_slice(), data.signature.as_slice()].concat();
     let data = super::ptr::ReadData::new_unchecked(buffer.as_ptr());
@@ -296,7 +307,12 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                             },
                         }
 
-                        match value.check(&metadata, &verification_keys, #[cfg(feature = "sessions")] session)
+                        match value.check(
+                            &metadata,
+                            &verification_keys,
+                            #[cfg(feature = "sessions")]
+                            session,
+                        )
                         {
                             Ok(false) => (), // not ready
                             Err(e) => error!("[Party {}] Error when checking: {:?}", id, e),
@@ -336,7 +352,12 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                             error!("[Party {}] Error when receiving check: {:?}", id, e);
                         }
 
-                        match value.check(&metadata, &verification_keys, #[cfg(feature = "sessions")] session)
+                        match value.check(
+                            &metadata,
+                            &verification_keys,
+                            #[cfg(feature = "sessions")]
+                            session,
+                        )
                         {
                             Ok(false) => (), // not ready
                             Err(e) => error!("[Party {}] Error when checking: {:?}", id, e),
@@ -358,7 +379,7 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                     {
                         let value = ConsistencyCheckValue::new_received(receiver, check);
                         entry.insert(value);
-                    }
+                    },
                 }
             },
             ConsistencyCheckCommand::ReceivedData(message) =>
@@ -384,7 +405,12 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                             },
                         }
 
-                        match value.check(&metadata, &verification_keys, #[cfg(feature = "sessions")] session)
+                        match value.check(
+                            &metadata,
+                            &verification_keys,
+                            #[cfg(feature = "sessions")]
+                            session,
+                        )
                         {
                             Ok(false) => (), // not ready
                             Err(e) => error!("[Party {}] Error when checking: {:?}", id, e),
@@ -406,9 +432,9 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                     {
                         let value = ConsistencyCheckValue::new_received_data(check);
                         entry.insert(value);
-                    }
+                    },
                 }
-            }
+            },
             ConsistencyCheckCommand::Wait(answer_channel) =>
             {
                 if is_consistent(&consistency)
@@ -424,7 +450,7 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                     debug!("[Party {}] Waiting for consistency check to finish", id);
                     open_requests.push(answer_channel);
                 }
-            }
+            },
         }
     }
 }

@@ -5,14 +5,13 @@ use log::{debug, info};
 use quinn::crypto::rustls::QuicClientConfig;
 use quinn::{Connection, TransportConfig};
 
-#[cfg(feature = "sessions")]
-use super::SessionID;
+use super::config::DEFAULT_TIMEOUT;
+use super::errors::ClientError;
 #[cfg(feature = "signing")]
 use super::sign::PrivateKey;
-use super::config::DEFAULT_TIMEOUT;
-use super::{Config, SendMessage};
-use crate::net::errors::ClientError;
-use crate::net::{make_addr, NetCommand, PartyID};
+#[cfg(feature = "sessions")]
+use super::SessionID;
+use super::{make_addr, Config, NetCommand, PartyID, SendMessage};
 
 async fn make_client(config: &Config) -> quinn::Endpoint
 {
@@ -38,7 +37,7 @@ async fn make_client_config(config: &Config) -> quinn::ClientConfig
     client_config
 }
 
-async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoint: &quinn::Endpoint, outgoing: &mut std::collections::HashMap::<PartyID, quinn::Connection>) -> quinn::Connection
+async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoint: &quinn::Endpoint, outgoing: &mut std::collections::HashMap<PartyID, quinn::Connection>) -> quinn::Connection
 {
     match outgoing.entry(receiver)
     {
@@ -81,8 +80,9 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: Se
         session,
         #[cfg(feature = "signing")]
         &signing_key,
-        &mut stream
-    ).await
+        &mut stream,
+    )
+    .await
     {
         answer_channel.send(Err(ClientError::Write(e))).unwrap();
         return;

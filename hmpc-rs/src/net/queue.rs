@@ -137,14 +137,20 @@ impl QueueState
     #[cfg(feature = "collective-consistency")]
     async fn check_consistency(&mut self, check: metadata::ConsistencyCheck)
     {
-        self.consistency_channel.send(ConsistencyCheckCommand::Request(check)).await.expect("Consistency check unavailable");
+        self.consistency_channel
+            .send(ConsistencyCheckCommand::Request(check))
+            .await
+            .expect("Consistency check unavailable");
     }
 
     #[cfg(feature = "collective-consistency")]
     async fn ensure_consistency(&mut self) -> Result<(), ReceiveError>
     {
         let (send_answer, receive_answer) = tokio::sync::oneshot::channel();
-        self.consistency_channel.send(ConsistencyCheckCommand::Wait(send_answer)).await.expect("Consistency check unavailable");
+        self.consistency_channel
+            .send(ConsistencyCheckCommand::Wait(send_answer))
+            .await
+            .expect("Consistency check unavailable");
         receive_answer.await??;
         Ok(())
     }
@@ -152,7 +158,9 @@ impl QueueState
     async fn send_message(net_channel: tokio::sync::mpsc::Sender<NetCommand>, message: metadata::Message, data: ReadData) -> Result<(), SendError>
     {
         let (send_answer, receive_answer) = tokio::sync::oneshot::channel();
-        net_channel.send(NetCommand::Send(SendMessage { metadata: message, data }, send_answer)).await?;
+        net_channel
+            .send(NetCommand::Send(SendMessage { metadata: message, data }, send_answer))
+            .await?;
         receive_answer.await??;
         Ok(())
     }
@@ -238,7 +246,11 @@ impl QueueState
             {
                 #[cfg(feature = "collective-consistency")]
                 {
-                    let receivers = communicator.iter().filter(|&&party| party != id && party != message.sender).copied().collect();
+                    let receivers = communicator
+                        .iter()
+                        .filter(|&&party| party != id && party != message.sender)
+                        .copied()
+                        .collect();
                     let check = (&message).to_consistency_check(message.sender, receivers, message_id);
                     self.check_consistency(check).await;
                 }
@@ -345,7 +357,11 @@ impl QueueState
                 {
                     #[cfg(feature = "collective-consistency")]
                     {
-                        let receivers = receivers.iter().filter(|&&party| party != id && party != sender).copied().collect();
+                        let receivers = receivers
+                            .iter()
+                            .filter(|&&party| party != id && party != sender)
+                            .copied()
+                            .collect();
                         let check = (&message).to_consistency_check(sender, receivers, message_id);
                         self.check_consistency(check).await;
                     }
@@ -454,29 +470,32 @@ impl Queue
 
         // thread to handle receiving data
         // spawns new threads for each connection
-        runtime.spawn(server::run(id, config.clone(), data_channel.clone(), #[cfg(feature = "collective-consistency")] consistency_channel.clone()));
+        runtime.spawn(server::run(
+            id,
+            config.clone(),
+            data_channel.clone(),
+            #[cfg(feature = "collective-consistency")]
+            consistency_channel.clone(),
+        ));
 
         // thread to handle sending data
         // spawns new threads for each connection
         runtime.spawn(client::run(id, config, receive_channel));
 
-        Ok(
-            Self
+        Ok(Self {
+            runtime,
+            state: QueueState
             {
-                runtime,
-                state: QueueState
-                {
-                    id,
-                    data_channel,
-                    net_channel,
-                    #[cfg(feature = "collective-consistency")]
-                    consistency_channel,
-                    counters: HashMap::new(),
-                    #[cfg(feature = "statistics")]
-                    network_statistics: NetworkStatistics::new(),
-                }
-            }
-        )
+                id,
+                data_channel,
+                net_channel,
+                #[cfg(feature = "collective-consistency")]
+                consistency_channel,
+                counters: HashMap::new(),
+                #[cfg(feature = "statistics")]
+                network_statistics: NetworkStatistics::new(),
+            },
+        })
     }
 
     pub fn id(&self) -> PartyID

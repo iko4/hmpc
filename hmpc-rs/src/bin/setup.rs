@@ -64,7 +64,7 @@ struct Cert
     /// Party ID for which the certificate should be generated for
     id: Vec<PartyID>,
     /// Also output signing keys when generating certificate
-    #[arg(short='s', long)]
+    #[arg(short = 's', long)]
     and_signing_key: bool,
     /// Generate certificate even if some certificate files already exist
     #[arg(short, long)]
