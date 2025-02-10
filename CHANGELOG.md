@@ -4,6 +4,18 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased
+
+### Added
+
+- Make library installable and support finding it (cmake).
+- "default" workflow (cmake).
+
+## Changed
+
+- Require at least CMake version 3.25.0.
+
+
 ## Version 0.5.1 - 2025-02-10
 
 ### Added

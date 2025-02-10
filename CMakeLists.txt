@@ -1,22 +1,37 @@
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.25.0)
 
-project(hmpc CXX)
+project(hmpc
+    VERSION 0.5.1
+    DESCRIPTION "An HPC-inspired MPC library"
+    HOMEPAGE_URL "https://github.com/iko4/hmpc"
+    LANGUAGES CXX
+)
 
-option(HMPC_BUILD_TESTING "Build tests for the library" ON)
-option(HMPC_TEST_COVERAGE "Add coverage to tests" OFF)
-option(HMPC_BUILD_EXTERNAL_EXAMPLES "Build external examples" ON)
-option(HMPC_BUILD_EXAMPLES "Build examples" ON)
-option(HMPC_TEST_EXAMPLES "Test if examples run" ON)
-option(HMPC_TIDY "Add clang-tidy targets" OFF)
+include(GNUInstallDirs)
 
-option(HMPC_ENABLE_CUDA "Add CUDA support" OFF)
+# feature flags
 option(HMPC_ENABLE_SESSIONS "Enable sessions" ON)
 option(HMPC_ENABLE_SIGNING "Enable signing of messages" ON)
 option(HMPC_ENABLE_COLLECTIVE_CONSISTENCY "Enable consistency check for collective communication operations" ON)
 option(HMPC_ENABLE_STATISTICS "Enable statistics, e.g., for networking" ON)
 
+# testing
+option(HMPC_BUILD_TESTING "Build tests for the library" ON)
+option(HMPC_TEST_COVERAGE "Add coverage to tests" OFF)
+
+# examples
+option(HMPC_BUILD_EXTERNAL_EXAMPLES "Build external examples" ON)
+option(HMPC_BUILD_EXAMPLES "Build examples" ON)
+option(HMPC_TEST_EXAMPLES "Test if examples run" ON)
+
+option(HMPC_TIDY "Add clang-tidy targets" OFF)
+
+# CUDA support
+option(HMPC_ENABLE_CUDA "Add CUDA support" OFF)
+
 set(HMPC_DEVICE_TARGETS "spir64_x86_64" CACHE STRING "SYCL targets (comma separated; for example: spir64,spir64_x86_64,native_cpu)")
 
+message("HMPC:\n - version: ${PROJECT_VERSION} (major: ${PROJECT_VERSION_MAJOR}, minor: ${PROJECT_VERSION_MINOR}, patch: ${PROJECT_VERSION_PATCH}, tweak: ${PROJECT_VERSION_TWEAK})")
 message("HMPC: Build:\n - CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}\n - CMAKE_CONFIGURATION_TYPES: ${CMAKE_CONFIGURATION_TYPES}\n - CMAKE_EXPORT_COMPILE_COMMANDS: ${CMAKE_EXPORT_COMPILE_COMMANDS}")
 message("HMPC: Build tests:\n - library tests: ${HMPC_BUILD_TESTING}\n - code coverage for tests: ${HMPC_TEST_COVERAGE}")
 message("HMPC: Build examples:\n - any examples: ${HMPC_BUILD_EXAMPLES}\n - external examples: ${HMPC_BUILD_EXTERNAL_EXAMPLES}\n - test examples: ${HMPC_TEST_EXAMPLES}")
@@ -40,7 +55,12 @@ message("HMPC: Targets: ${HMPC_DEVICE_TARGETS}")
 set(CMAKE_CXX_STANDARD 26)
 
 add_library(hmpc INTERFACE)
-target_include_directories(hmpc INTERFACE .)
+set_target_properties(hmpc PROPERTIES VERSION ${PROJECT_VERSION})
+target_sources(hmpc INTERFACE
+    FILE_SET hmpc_headers
+    TYPE HEADERS
+    FILES hmpc
+)
 # target_compile_features(hmpc INTERFACE cxx_std_26)
 if (HMPC_ENABLE_SESSIONS)
     target_compile_definitions(hmpc INTERFACE
@@ -73,6 +93,45 @@ if (HMPC_ENABLE_CUDA)
     target_compile_options(hmpc INTERFACE ${HMPC_CUDA_FLAGS})
     target_link_options(hmpc INTERFACE ${HMPC_CUDA_LINK_FLAGS})
 endif()
+
+
+include(CMakePackageConfigHelpers)
+set(INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/hmpc-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/hmpc-config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hmpc
+    PATH_VARS INSTALL_LIBDIR
+)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/hmpc-config-version.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY ExactVersion # for version 0.X.Y only exact version compatibility
+)
+
+install(TARGETS hmpc EXPORT hmpc-targets
+    FILE_SET hmpc_headers
+)
+
+install(EXPORT hmpc-targets
+    FILE hmpc-targets.cmake
+    NAMESPACE hmpc::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hmpc
+)
+
+export(EXPORT hmpc-targets
+    FILE ${CMAKE_CURRENT_BINARY_DIR}/hmpc-targets.cmake
+    NAMESPACE hmpc::
+)
+
+install(
+  FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/hmpc-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/hmpc-config-version.cmake
+  DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/hmpc
+)
+
 
 # List of all targets that have source and could be built
 set(HMPC_TARGETS)

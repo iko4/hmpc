@@ -1,10 +1,10 @@
 {
-    "version": 3,
+    "version": 6,
     "cmakeMinimumRequired":
     {
         "major": 3,
-        "minor": 22,
-        "patch": 1
+        "minor": 25,
+        "patch": 0
     },
     "configurePresets":
     [
@@ -75,6 +75,17 @@
             "name": "default",
             "configurePreset": "default",
             "configuration": "Release"
+        }
+    ],
+    "workflowPresets":
+    [
+        {
+            "name": "default",
+            "steps": [
+                { "type": "configure", "name": "default" },
+                { "type": "build", "name": "default" },
+                { "type": "test", "name": "default" }
+            ]
         }
     ]
 }

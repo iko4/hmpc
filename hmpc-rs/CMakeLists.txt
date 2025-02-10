@@ -11,7 +11,8 @@ set(HMPC_RS_BUILD_DIR ${CMAKE_BINARY_DIR}/rust/hmpc-rs-build)
 set(HMPC_RS_LOG_DIR ${HMPC_RS_STAMP_DIR})
 set(HMPC_RS_WORKING_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(HMPC_RS_INCLUDE ${CMAKE_BINARY_DIR}/generated/include)
-set(HMPC_RS_GENERATED_HEADER ${HMPC_RS_INCLUDE}/hmpc/ffi.hpp)
+set(HMPC_RS_INCLUDE_BASE hmpc)
+set(HMPC_RS_GENERATED_HEADER ${HMPC_RS_INCLUDE}/${HMPC_RS_INCLUDE_BASE}/ffi.hpp)
 
 function(hmpc_rs_set_paths CONFIG LIB)
     set(${LIB} ${HMPC_RS_BUILD_DIR}/CMake-${CONFIG}/${CMAKE_STATIC_LIBRARY_PREFIX}hmpc_rs${CMAKE_STATIC_LIBRARY_SUFFIX} PARENT_SCOPE)
@@ -88,13 +89,22 @@ add_custom_target(hmpc-rs-header
     DEPENDS ${HMPC_RS_GENERATED_HEADER}
 )
 
+# install generated header
+install(FILES ${HMPC_RS_GENERATED_HEADER}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${HMPC_RS_INCLUDE_BASE}
+)
+
 message("HMPC-RS:\n - include: ${HMPC_RS_INCLUDE}\n - generated header: ${HMPC_RS_GENERATED_HEADER}\n - build toolchain: ${HMPC_RS_CARGO_TOOLCHAIN}\n - format toolchain: ${HMPC_RS_RUSTFMT_TOOLCHAIN}\n - features: ${HMPC_RS_FEATURES}\n - cargo args: ${HMPC_RS_CARGO_ARGS}")
 # directory needs to be present before we use target_include_directories below
 file(MAKE_DIRECTORY ${HMPC_RS_INCLUDE})
 
 add_library(hmpc-rs STATIC IMPORTED GLOBAL)
+set_target_properties(hmpc-rs PROPERTIES VERSION ${PROJECT_VERSION})
 add_dependencies(hmpc-rs hmpc-rs-cargo hmpc-rs-header)
-target_include_directories(hmpc-rs INTERFACE ${HMPC_RS_INCLUDE})
+target_include_directories(hmpc-rs INTERFACE
+    $<BUILD_INTERFACE:${HMPC_RS_INCLUDE}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     hmpc_rs_set_paths(${CONFIG} HMPC_RS_LIB)
     message("HMPC-RS:${CONFIG}\n - lib: ${HMPC_RS_LIB}")
@@ -103,6 +113,12 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
         hmpc-rs
         PROPERTIES
             IMPORTED_LOCATION_${CONFIG} ${HMPC_RS_LIB}
+    )
+    # install built library
+    get_target_property(LOCATION hmpc-rs LOCATION_${CONFIG})
+    install(
+        FILES ${LOCATION} DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        CONFIGURATIONS ${CONFIG}
     )
 endforeach()
 
