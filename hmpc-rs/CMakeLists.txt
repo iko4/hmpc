@@ -85,13 +85,17 @@ add_custom_command(
     WORKING_DIRECTORY ${HMPC_RS_WORKING_DIR}
 )
 
-add_custom_target(hmpc-rs-header
-    DEPENDS ${HMPC_RS_GENERATED_HEADER}
+add_library(hmpc-rs-header INTERFACE)
+target_sources(hmpc-rs-header PUBLIC
+    FILE_SET hmpc_rs_headers
+    TYPE HEADERS
+    BASE_DIRS ${HMPC_RS_INCLUDE}
+    FILES ${HMPC_RS_GENERATED_HEADER}
 )
 
 # install generated header
-install(FILES ${HMPC_RS_GENERATED_HEADER}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${HMPC_RS_INCLUDE_BASE}
+install(TARGETS hmpc-rs-header # don't need to EXPORT because headers are combined with main headers
+    FILE_SET hmpc_rs_headers
 )
 
 message("HMPC-RS:\n - include: ${HMPC_RS_INCLUDE}\n - generated header: ${HMPC_RS_GENERATED_HEADER}\n - build toolchain: ${HMPC_RS_CARGO_TOOLCHAIN}\n - format toolchain: ${HMPC_RS_RUSTFMT_TOOLCHAIN}\n - features: ${HMPC_RS_FEATURES}\n - cargo args: ${HMPC_RS_CARGO_ARGS}")
@@ -116,8 +120,8 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     )
     # install built library
     get_target_property(LOCATION hmpc-rs LOCATION_${CONFIG})
-    install(
-        FILES ${LOCATION} DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    install(FILES ${LOCATION}
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
         CONFIGURATIONS ${CONFIG}
     )
 endforeach()
