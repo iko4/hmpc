@@ -2,7 +2,8 @@
     "build":
     {
         "dockerfile": "Containerfile",
-        "context": ".."
+        "context": "..",
+        "target": "development"
     },
 
     "remoteUser": "hmpc-dev",
