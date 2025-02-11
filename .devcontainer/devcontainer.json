@@ -5,7 +5,7 @@
         "context": ".."
     },
 
-    "remoteUser": "vscode",
+    "remoteUser": "hmpc-dev",
 
     "runArgs":
     [

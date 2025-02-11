@@ -47,7 +47,7 @@ ENV CMAKE_ROOT=/opt/cmake
 ENV LLVM_ROOT=/opt/dpcpp
 ENV VCPKG_ROOT=/workspaces/vcpkg
 ENV VCPKG_DISABLE_METRICS=1
-ENV PATH=$LLVM_ROOT/bin:$CMAKE_ROOT/bin:/home/vscode/.cargo/bin:$PATH
+ENV PATH=$LLVM_ROOT/bin:$CMAKE_ROOT/bin:/home/hmpc-dev/.cargo/bin:$PATH
 ENV LD_LIBRARY_PATH=$LLVM_ROOT/lib/x86_64-unknown-linux-gnu:$LLVM_ROOT/lib:$CUDA_LIB_PATH:$CUDA_ROOT/extras/CUPTI/lib64:$LD_LIBRARY_PATH
 ENV CPATH=$LLVM_ROOT/include:$LLVM_ROOT/include/sycl:$CPATH
 COPY --from=dpcpp-builder /workspaces/dpcpp/llvm/build/install/ $LLVM_ROOT
@@ -57,16 +57,16 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -
     python3-pip \
     iproute2 iputils-ping \
     && rm -rf /var/lib/apt/lists/* \
- && groupadd -g ${group_id:?} --non-unique vscode \
- && useradd --create-home -u ${user_id:?} -g ${group_id:?} --shell /bin/bash vscode \
+ && groupadd -g ${group_id:?} --non-unique hmpc-dev \
+ && useradd --create-home -u ${user_id:?} -g ${group_id:?} --shell /bin/bash hmpc-dev \
  && mkdir -p $CMAKE_ROOT \
  && cd $CMAKE_ROOT \
  && curl -sSfLO https://github.com/Kitware/CMake/releases/download/v3.31.5/cmake-3.31.5-linux-x86_64.sh \
  && sh ./cmake-3.31.5-linux-x86_64.sh --skip-license --prefix=/opt/cmake \
  && rm ./cmake-3.31.5-linux-x86_64.sh
-USER vscode
+USER hmpc-dev
 WORKDIR /workspaces
-COPY --chown=vscode requirements.txt /home/vscode/requirements.txt
+COPY --chown=hmpc-dev requirements.txt /home/hmpc-dev/requirements.txt
 # Recommended way to install Rust: https://www.rust-lang.org/tools/install
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
  && rustup toolchain install nightly \
@@ -87,4 +87,4 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -
     libsodium-dev \
     libssl-dev \
  && rm -rf /var/lib/apt/lists/*
-USER vscode
+USER hmpc-dev
