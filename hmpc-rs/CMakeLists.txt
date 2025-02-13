@@ -139,7 +139,7 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     )
     # install built binaries
     get_target_property(LOCATION setup LOCATION_${CONFIG})
-    install(FILES ${LOCATION}
+    install(PROGRAMS ${LOCATION}
         DESTINATION ${CMAKE_INSTALL_BINDIR}
         CONFIGURATIONS ${CONFIG}
         RENAME hmpc-setup
