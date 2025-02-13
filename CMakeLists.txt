@@ -52,10 +52,9 @@ if (HMPC_ENABLE_CUDA)
 endif()
 message("HMPC: Targets: ${HMPC_DEVICE_TARGETS}")
 
-set(CMAKE_CXX_STANDARD 26)
-
 add_library(hmpc INTERFACE)
 set_target_properties(hmpc PROPERTIES VERSION ${PROJECT_VERSION})
+target_compile_features(hmpc INTERFACE cxx_std_23)
 target_sources(hmpc INTERFACE
     FILE_SET hmpc_headers
     TYPE HEADERS

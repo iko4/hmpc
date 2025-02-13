@@ -16,6 +16,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 
 - Require at least CMake version 3.25.0.
 - Container user to "hmpc-dev".
+- Attach C++ version to library (cmake).
 
 
 ## Version 0.5.1 - 2025-02-10
