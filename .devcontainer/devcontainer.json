@@ -3,7 +3,7 @@
     {
         "dockerfile": "Containerfile",
         "context": "..",
-        "target": "development"
+        "target": "library-development"
     },
 
     "remoteUser": "hmpc-dev",

@@ -1,8 +1,10 @@
 # syntax=docker/dockerfile:1
 # hmpc containerfile
 
-# dev=default (default packages for building) or dev=mpspdz (more packages to run MP-SPDZ)
-ARG dev=mpspdz
+# indicates what packages to install in the container image
+# packages_for=default (default packages for building)
+# packages_for=mpspdz (more packages to also build MP-SPDZ)
+ARG packages_for=mpspdz
 
 # base container image
 FROM intel/oneapi-runtime@sha256:060ba4aa60a58add8d1d39fd49cd7b3bf274dde0f8ea4a988fdf6eb57abab97e AS base-ubuntu
@@ -44,8 +46,8 @@ RUN --mount=type=bind,from=cuda,target=$CUDA_PATH \
  && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=omp ${COMPILE_PARALLELISM} \
  && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=install ${COMPILE_PARALLELISM}
 
-# default development container image
-FROM base-ubuntu AS dev-default
+# base development container image
+FROM base-ubuntu AS dev-base
 ARG user_id=1000
 ARG group_id=1000
 ENV CMAKE_ROOT=/opt/cmake
@@ -71,6 +73,9 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -
  && rm ./cmake-3.31.5-linux-x86_64.sh
 USER hmpc-dev
 WORKDIR /workspaces
+
+# default development container image
+FROM dev-base AS dev-default
 # Recommended way to install Rust: https://www.rust-lang.org/tools/install
 RUN --mount=type=bind,source=requirements.txt,target=/home/hmpc-dev/requirements.txt \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
@@ -96,14 +101,14 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -
 USER hmpc-dev
 
 # container image to build hmpc
-FROM dev-default AS runtime-builder
+FROM dev-default AS hmpc-builder
 RUN --mount=type=bind,source=.,target=/workspaces/hmpc \
     cmake --preset default -B /home/hmpc-dev/build -DHMPC_BUILD_TESTING=OFF -DHMPC_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/home/hmpc-dev/install \
  && cmake --build /home/hmpc-dev/build --target install
 
 # hmpc container image (to use hmpc as a dependency)
-FROM dev-default AS runtime
-COPY --from=runtime-builder /home/hmpc-dev/install /usr/local
+FROM dev-base AS development
+COPY --from=hmpc-builder /home/hmpc-dev/install /usr/local
 
 # hmpc-dev container image (to develop hmpc)
-FROM dev-${dev} AS development
+FROM dev-${packages_for} AS library-development

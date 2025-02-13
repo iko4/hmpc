@@ -10,7 +10,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 
 - Make library installable and support finding it (cmake).
 - "default" workflow (cmake).
-- Separate "development" and "runtime" container image targets.
+- Separate "development" and "library-development" container image targets.
 
 ## Changed
 
