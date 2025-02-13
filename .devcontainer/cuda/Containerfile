@@ -102,7 +102,7 @@ USER hmpc-dev
 
 # container image to build hmpc
 FROM dev-default AS hmpc-builder
-COPY . /workspaces/hmpc
+COPY --chown=hmpc-dev:hmpc-dev . /workspaces/hmpc
 RUN cmake --preset default -B /home/hmpc-dev/build -DHMPC_BUILD_TESTING=OFF -DHMPC_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/home/hmpc-dev/install \
  && cmake --build /home/hmpc-dev/build --config Release --target install
 
