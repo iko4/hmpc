@@ -85,8 +85,8 @@ USER hmpc-dev
 
 # container image to build hmpc
 FROM dev-default AS hmpc-builder
-RUN --mount=type=bind,source=.,target=/workspaces/hmpc \
-    cmake --preset default -B /home/hmpc-dev/build -DHMPC_BUILD_TESTING=OFF -DHMPC_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/home/hmpc-dev/install \
+COPY . /workspaces/hmpc
+RUN cmake --preset default -B /home/hmpc-dev/build -DHMPC_BUILD_TESTING=OFF -DHMPC_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/home/hmpc-dev/install \
  && cmake --build /home/hmpc-dev/build --config Release --target install
 
 # hmpc container image (to use hmpc as a dependency)
