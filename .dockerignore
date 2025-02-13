@@ -1,15 +1,21 @@
 # User files
 .vscode
 CMakeUserPresets.json
-*.der
-*.bin
+**/*.der
+**/*.bin
 
 # Build files
 build*
 reports*
 
+# Rust build files
+hmpc-rs/target*
+
 # Runtime files
-core
-!core/
-*.tsv
-*.log
+**/core
+!**/core/*
+**/*.tsv
+**/*.log
+
+# Other files
+.git
