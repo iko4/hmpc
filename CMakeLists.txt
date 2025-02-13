@@ -97,11 +97,12 @@ endif()
 
 include(CMakePackageConfigHelpers)
 set(INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
+set(INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
 configure_package_config_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/hmpc-config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/hmpc-config.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hmpc
-    PATH_VARS INSTALL_LIBDIR
+    PATH_VARS INSTALL_LIBDIR INSTALL_BINDIR
 )
 write_basic_package_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/hmpc-config-version.cmake

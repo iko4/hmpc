@@ -14,11 +14,12 @@ set(HMPC_RS_INCLUDE ${CMAKE_BINARY_DIR}/generated/include)
 set(HMPC_RS_INCLUDE_BASE hmpc)
 set(HMPC_RS_GENERATED_HEADER ${HMPC_RS_INCLUDE}/${HMPC_RS_INCLUDE_BASE}/ffi.hpp)
 
-function(hmpc_rs_set_paths CONFIG LIB)
+function(hmpc_rs_set_paths CONFIG LIB BIN_SETUP)
     set(${LIB} ${HMPC_RS_BUILD_DIR}/CMake-${CONFIG}/${CMAKE_STATIC_LIBRARY_PREFIX}hmpc_rs${CMAKE_STATIC_LIBRARY_SUFFIX} PARENT_SCOPE)
+    set(${BIN_SETUP} ${HMPC_RS_BUILD_DIR}/CMake-${CONFIG}/setup${CMAKE_EXECUTABLE_SUFFIX} PARENT_SCOPE)
 endfunction()
 
-hmpc_rs_set_paths($<CONFIG> HMPC_RS_LIB)
+hmpc_rs_set_paths($<CONFIG> HMPC_RS_LIB HMPC_RS_BIN_SETUP)
 
 include(ExternalProject)
 
@@ -67,8 +68,10 @@ ExternalProject_Add(hmpc-rs-cargo
     DOWNLOAD_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cargo ${HMPC_RS_CARGO_TOOLCHAIN} build ${HMPC_RS_CARGO_ARGS} --lib
+        COMMAND cargo ${HMPC_RS_CARGO_TOOLCHAIN} build ${HMPC_RS_CARGO_ARGS} --bin setup
     BUILD_BYPRODUCTS
         ${HMPC_RS_LIB}
+        ${HMPC_RS_BIN_SETUP}
     BUILD_ALWAYS ON
     INSTALL_COMMAND ""
     LOG_BUILD ON
@@ -104,25 +107,42 @@ file(MAKE_DIRECTORY ${HMPC_RS_INCLUDE})
 
 add_library(hmpc-rs STATIC IMPORTED GLOBAL)
 set_target_properties(hmpc-rs PROPERTIES VERSION ${PROJECT_VERSION})
-add_dependencies(hmpc-rs hmpc-rs-cargo hmpc-rs-header)
+target_link_libraries(hmpc-rs INTERFACE hmpc-rs-header)
+add_dependencies(hmpc-rs hmpc-rs-cargo)
 target_include_directories(hmpc-rs INTERFACE
     $<BUILD_INTERFACE:${HMPC_RS_INCLUDE}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+add_executable(setup IMPORTED)
+set_target_properties(setup PROPERTIES VERSION ${PROJECT_VERSION})
+
 foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
-    hmpc_rs_set_paths(${CONFIG} HMPC_RS_LIB)
-    message("HMPC-RS:${CONFIG}\n - lib: ${HMPC_RS_LIB}")
+    hmpc_rs_set_paths(${CONFIG} HMPC_RS_LIB HMPC_RS_BIN_SETUP)
+    message("HMPC-RS:${CONFIG}\n - lib: ${HMPC_RS_LIB}\n - setup (bin): ${HMPC_RS_BIN_SETUP}")
     string(TOUPPER ${CONFIG} CONFIG)
     set_target_properties(
         hmpc-rs
         PROPERTIES
             IMPORTED_LOCATION_${CONFIG} ${HMPC_RS_LIB}
     )
+    set_target_properties(
+        setup
+        PROPERTIES
+            IMPORTED_LOCATION_${CONFIG} ${HMPC_RS_BIN_SETUP}
+    )
     # install built library
     get_target_property(LOCATION hmpc-rs LOCATION_${CONFIG})
     install(FILES ${LOCATION}
         DESTINATION ${CMAKE_INSTALL_LIBDIR}
         CONFIGURATIONS ${CONFIG}
+    )
+    # install built binaries
+    get_target_property(LOCATION setup LOCATION_${CONFIG})
+    install(FILES ${LOCATION}
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        CONFIGURATIONS ${CONFIG}
+        RENAME hmpc-setup
     )
 endforeach()
 
