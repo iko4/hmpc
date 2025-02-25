@@ -18,6 +18,7 @@ add_executable(host-tests
     crypto/cipher.cpp
     random/binomial.cpp
     random/uniform.cpp
+    typing/reference.cpp
 )
 target_include_directories(host-tests PRIVATE .)
 target_link_libraries(host-tests PRIVATE hmpc Catch2::Catch2WithMain fmt::fmt)
