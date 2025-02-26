@@ -19,6 +19,7 @@ add_executable(host-tests
     random/binomial.cpp
     random/uniform.cpp
     typing/reference.cpp
+    typing/structure.cpp
 )
 target_include_directories(host-tests PRIVATE .)
 target_link_libraries(host-tests PRIVATE hmpc Catch2::Catch2WithMain fmt::fmt)
