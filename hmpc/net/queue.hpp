@@ -3,6 +3,7 @@
 #include <hmpc/comp/accessor.hpp>
 #include <hmpc/net/communicator.hpp>
 #include <hmpc/net/config.hpp>
+#include <hmpc/net/structure.hpp>
 #include <hmpc/typing/reference.hpp>
 
 namespace hmpc::net
@@ -33,34 +34,6 @@ namespace hmpc::net
             return result;
         }
 
-        template<typename T, party_id... Parties>
-        static auto make_result_storage(communicator<Parties...>, auto shape)
-        {
-            static_assert(not ((Parties == Id) or ...));
-
-            return std::array
-            {
-                (static_cast<void>(Parties), hmpc::comp::make_tensor<T>(shape))...
-            };
-        }
-
-        template<typename T, party_id... Parties>
-        static auto make_result_storage(communicator<Parties...>, hmpc::shapeless_tag)
-        {
-            static_assert(not ((Parties == Id) or ...));
-
-            std::array<T, sizeof...(Parties)> result;
-
-            return result;
-        }
-
-        template<typename... Ts, party_id... Parties>
-        static auto make_new_2d_result_storage(communicator<Parties...> communicator, auto... shapes)
-        {
-            return std::make_tuple(
-                make_result_storage<Ts>(communicator, shapes)...
-            );
-        }
 
         template<typename T, hmpc::size... Dimensions>
         static auto get_byte_size(hmpc::comp::tensor<T, Dimensions...>& tensor)
@@ -77,178 +50,8 @@ namespace hmpc::net
             return bit_size / 8;
         }
 
-        template<typename T, hmpc::size... Dimensions, party_id... Parties>
-        static auto make_result_storage(communicator<Parties...> communicator, hmpc::comp::tensor<T, Dimensions...>&& tensor)
-        {
-            static_assert(((Parties == Id) or ...));
-
-            using tensor_type = hmpc::comp::tensor<T, Dimensions...>;
-
-            auto shape = tensor.shape();
-
-            return std::array<tensor_type, communicator.size>
-            {
-                [&]()
-                {
-                    if constexpr (Parties == Id)
-                    {
-                        return std::move(tensor);
-                    }
-                    else
-                    {
-                        return hmpc::comp::make_tensor<T>(shape);
-                    }
-                }()...
-            };
-        }
-
-        template<hmpc::typing::universal_reference_to_rvalue T, party_id... Parties>
-        static auto make_result_storage(communicator<Parties...> communicator, T&& value)
-        {
-            static_assert(((Parties == Id) or ...));
-
-            return std::array<std::remove_cvref_t<T>, communicator.size>
-            {
-                [&]()
-                {
-                    if constexpr (Parties == Id)
-                    {
-                        return std::move(value);
-                    }
-                    else
-                    {
-                        std::remove_cvref_t<T> v;
-                        return v;
-                    }
-                }()...
-            };
-        }
-
-        template<party_id... Parties, typename... Tensors>
-        static auto make_2d_result_storage(communicator<Parties...> communicator, Tensors&&... tensors)
-        {
-            return std::make_tuple(
-                make_result_storage(communicator, std::forward<Tensors>(tensors))...
-            );
-        }
-
-        template<typename T, hmpc::size... Dimensions, party_id I>
-        static auto make_accessor(hmpc::party_constant<I>, hmpc::comp::tensor<T, Dimensions...>& tensor)
-        {
-            return hmpc::comp::host_accessor
-            {
-                tensor,
-                [&]()
-                {
-                    if constexpr (I == Id)
-                    {
-                        return hmpc::access::read;
-                    }
-                    else
-                    {
-                        return hmpc::access::discard_write;
-                    }
-                }()
-            };
-        }
-
-        template<typename T, party_id I>
-        static auto make_accessor(hmpc::party_constant<I>, T& value)
-        {
-            if constexpr (I == Id)
-            {
-                return value.span(hmpc::access::read);
-            }
-            else
-            {
-                return value.span(hmpc::access::write);
-            }
-        }
-
-        template<typename Tensors, party_id... Parties>
-        static auto make_accessors(communicator<Parties...> communicator, Tensors& tensors)
-        {
-            static_assert(std::tuple_size_v<Tensors> == communicator.size);
-            return hmpc::iter::for_packed_range<communicator.size>([&](auto... i)
-            {
-                return std::make_tuple(
-                    make_accessor(
-                        communicator.get(i),
-                        std::get<i>(tensors)
-                    )...
-                );
-            });
-        }
-
-        template<typename Tensors, party_id... Parties>
-        static auto make_2d_accessors(communicator<Parties...> communicator, Tensors& tensors)
-        {
-            constexpr auto size = std::tuple_size_v<Tensors>;
-            return hmpc::iter::for_packed_range<size>([&](auto... i)
-            {
-                return std::make_tuple(
-                    make_accessors(communicator, std::get<i>(tensors))...
-                );
-            });
-        }
-
-        template<typename T, typename Access, typename Shape>
-        static hmpc::net::data_ptr make_data_ptr(hmpc::comp::host_accessor<T, Access, Shape>& accessor)
-        {
-            if constexpr (hmpc::access::is_read_only<Access>)
-            {
-                using accessor_type = hmpc::comp::host_accessor<T, Access, Shape>;
-                return static_cast<hmpc::net::data_ptr>(const_cast<accessor_type::limb_type*>(accessor.data()));
-            }
-            else
-            {
-                static_assert(hmpc::access::is_write_only<Access>);
-                return static_cast<hmpc::net::data_ptr>(accessor.data());
-            }
-        }
-
-        template<typename Span>
-        static hmpc::net::data_ptr make_data_ptr(Span& span)
-        {
-            if constexpr (hmpc::read_only_limb_span<Span>)
-            {
-                return static_cast<hmpc::net::data_ptr>(const_cast<Span::limb_type*>(span.ptr()));
-            }
-            else
-            {
-                static_assert(hmpc::write_only_limb_span<Span>);
-                return static_cast<hmpc::net::data_ptr>(span.ptr());
-            }
-        }
-
-        template<typename Accessors, party_id... Parties>
-        static auto make_data_ptrs(communicator<Parties...> communicator, Accessors& accessors)
-        {
-            static_assert(std::tuple_size_v<Accessors> == communicator.size);
-            return hmpc::iter::for_packed_range<communicator.size>([&](auto... i)
-            {
-                return std::array<hmpc::net::data_ptr, communicator.size>
-                {
-                    make_data_ptr(std::get<i>(accessors))...
-                };
-            });
-        }
-
-        template<typename Accessors, party_id... Parties>
-        static auto make_2d_data_ptrs(communicator<Parties...> communicator, Accessors& accessors)
-        {
-            constexpr auto size = std::tuple_size_v<Accessors>;
-            return hmpc::iter::for_packed_range<size>([&](auto... i)
-            {
-                return std::array<std::array<hmpc::net::data_ptr, communicator.size>, size>
-                {
-                    make_data_ptrs(communicator, std::get<i>(accessors))...
-                };
-            });
-        }
-
     public:
-        static constexpr party_id id = Id;
+        static constexpr party_constant<Id> id = {};
 
         explicit queue()
             : handle(hmpc::ffi::hmpc_ffi_net_queue_init(id, nullptr))
@@ -360,7 +163,7 @@ namespace hmpc::net
             };
 
             auto accessors = std::make_tuple(
-                make_accessor(hmpc::party_constant_of<Id>, tensors)...
+                make_accessor(id, id, tensors)...
             );
 
             auto data = make_data_ptrs(senders, accessors);
@@ -442,10 +245,10 @@ namespace hmpc::net
                 .size = byte_size,
             };
 
-            auto result = make_result_storage(communicator, std::move(tensor));
+            auto result = make_result_storage_with(id, communicator, std::move(tensor));
 
             // TODO: technically, we do not need to access our own tensor and could think of a way to avoid this
-            auto accessors = make_accessors(communicator, result);
+            auto accessors = make_accessors(id, communicator, result);
 
             auto data = make_data_ptrs(communicator, accessors);
 
@@ -478,7 +281,7 @@ namespace hmpc::net
                 .size = byte_size,
             };
 
-            auto accessors = make_accessors(communicator, result);
+            auto accessors = make_accessors(id, communicator, result);
 
             auto data = make_data_ptrs(communicator, accessors);
 
@@ -557,9 +360,9 @@ namespace hmpc::net
                 };
             });
 
-            auto accessors = make_2d_accessors(communicator, result);
+            auto accessors = make_multi_accessors(communicator, result);
 
-            auto data = make_2d_data_ptrs(communicator, accessors);
+            auto data = make_multi_data_ptrs(communicator, accessors);
 
             if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_multi_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(communicator), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
@@ -599,7 +402,7 @@ namespace hmpc::net
             };
 
             auto accessors = std::make_tuple(
-                make_accessor(hmpc::party_constant_of<Id>, tensors)...
+                make_accessor(id, id, tensors)...
             );
 
             auto data = make_data_ptrs(receivers, accessors);
@@ -629,9 +432,9 @@ namespace hmpc::net
                 .size = byte_size,
             };
 
-            auto result = make_result_storage(communicator, std::move(tensor));
+            auto result = make_result_storage_with(id, communicator, std::move(tensor));
 
-            auto accessors = make_accessors(communicator, result);
+            auto accessors = make_accessors(id, communicator, result);
 
             auto data = make_data_ptrs(communicator, accessors);
 
@@ -667,11 +470,11 @@ namespace hmpc::net
                 }()...
             };
 
-            auto result = make_2d_result_storage(communicator, std::move(tensors)...);
+            auto result = make_multi_result_storage_with(id, communicator, std::move(tensors)...);
 
-            auto accessors = make_2d_accessors(communicator, result);
+            auto accessors = make_multi_accessors(id, communicator, result);
 
-            auto data = make_2d_data_ptrs(communicator, accessors);
+            auto data = make_multi_data_ptrs(communicator, accessors);
 
             if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(communicator), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
@@ -699,9 +502,9 @@ namespace hmpc::net
                 .size = byte_size,
             };
 
-            auto result = make_result_storage(senders, std::move(tensor));
+            auto result = make_result_storage_with(id, senders, std::move(tensor));
 
-            auto accessors = make_accessors(senders, result);
+            auto accessors = make_accessors(id, senders, result);
 
             auto data = make_data_ptrs(senders, accessors);
 
@@ -733,7 +536,7 @@ namespace hmpc::net
                 .size = byte_size,
             };
 
-            auto accessors = make_accessors(senders, result);
+            auto accessors = make_accessors(id, senders, result);
 
             auto data = make_data_ptrs(senders, accessors);
 
@@ -769,11 +572,11 @@ namespace hmpc::net
                 }()...
             };
 
-            auto result = make_2d_result_storage(senders, std::move(tensors)...);
+            auto result = make_multi_result_storage_with(id, senders, std::move(tensors)...);
 
-            auto accessors = make_2d_accessors(senders, result);
+            auto accessors = make_multi_accessors(id, senders, result);
 
-            auto data = make_2d_data_ptrs(senders, accessors);
+            auto data = make_multi_data_ptrs(senders, accessors);
 
             if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(senders), detail::to_ffi(receivers), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
@@ -813,9 +616,9 @@ namespace hmpc::net
                 };
             });
 
-            auto accessors = make_2d_accessors(senders, result);
+            auto accessors = make_multi_accessors(id, senders, result);
 
-            auto data = make_2d_data_ptrs(senders, accessors);
+            auto data = make_multi_data_ptrs(senders, accessors);
 
             if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(senders), detail::to_ffi(receivers), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
@@ -837,9 +640,10 @@ namespace hmpc::net
 
             constexpr hmpc::size count = sizeof...(Tensors);
 
-            auto result = make_2d_result_storage(
+            auto result = make_multi_result_storage_with(
+                id,
                 communicator,
-                auto(std::get<communicator.index_of(hmpc::party_constant_of<Id>)>(std::forward<Tensors>(tensors)))... // copy to not use a moved-from object later
+                auto(std::get<communicator.index_of(hmpc::party_constant_of<Id>)>(tensors))... // copy to not use a moved-from object later
             );
 
             auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
@@ -863,11 +667,11 @@ namespace hmpc::net
 
             auto send = std::make_tuple(std::forward<Tensors>(tensors)...);
 
-            auto send_accessors = make_2d_accessors(communicator, send);
-            auto receive_accessors = make_2d_accessors(communicator, result);
+            auto send_accessors = make_multi_accessors(id, communicator, send);
+            auto receive_accessors = make_multi_accessors(id, communicator, result);
 
-            auto send_data = make_2d_data_ptrs(communicator, send_accessors);
-            auto receive_data = make_2d_data_ptrs(communicator, receive_accessors);
+            auto send_data = make_multi_data_ptrs(communicator, send_accessors);
+            auto receive_data = make_multi_data_ptrs(communicator, receive_accessors);
 
             if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_multi_all_to_all(handle.get(), detail::to_ffi(metadata), detail::to_ffi(communicator), detail::to_2d_ffi(send_data), detail::to_2d_ffi(receive_data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
