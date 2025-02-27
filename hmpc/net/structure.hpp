@@ -10,28 +10,6 @@
 
 namespace hmpc::net
 {
-    template<typename T, hmpc::size... Dimensions>
-    auto default_like(hmpc::comp::tensor<T, Dimensions...> const& tensor)
-    {
-        return hmpc::comp::make_tensor<T>(tensor.shape());
-    }
-
-    template<typename T>
-    auto default_like(T const&)
-    {
-        T value;
-        return value;
-    }
-
-    template<hmpc::structure T>
-    T default_like(T const& structure)
-    {
-        return hmpc::iter::for_packed_range<T::size>([&](auto... i)
-        {
-            return T::from_parts(default_like(structure.get(i))...);
-        });
-    }
-
     template<hmpc::typing::universal_reference_to_rvalue T, party_id Id, party_id... Parties>
     auto make_result_storage_with(hmpc::party_constant<Id> id, communicator<Parties...> communicator, T&& value)
     {
@@ -39,20 +17,7 @@ namespace hmpc::net
 
         if constexpr (hmpc::collective_structure_element<T>)
         {
-            return T::owner_from_parts(
-                [&]()
-                {
-                    if constexpr (Parties == Id)
-                    {
-                        // TODO: think of a way to allowing moving value (note: default_like should not use a moved-from value)
-                        return value;
-                    }
-                    else
-                    {
-                        return default_like(value);
-                    }
-                }()...
-            );
+            return T::default_owner_from(std::move(value));
         }
         else
         {
@@ -188,7 +153,7 @@ namespace hmpc::net
                                 make_accessor(
                                     id,
                                     communicator.get(i),
-                                    hmpc::iter::at(std::get<i>(std::get<tuple_index>(values)), j)
+                                    hmpc::iter::at(get<i>(std::get<tuple_index>(values)), j)
                                 )...
                             );
                         });
@@ -198,7 +163,7 @@ namespace hmpc::net
                 {
                     if constexpr (j == 0)
                     {
-                        return make_accessors(communicator, std::get<tuple_index>(values));
+                        return make_accessors(id, communicator, std::get<tuple_index>(values));
                     }
                     else
                     {
@@ -293,5 +258,20 @@ namespace hmpc::net
                 make_data_ptrs(communicator, std::get<i>(accessors))...
             };
         });
+    }
+
+    template<typename T, hmpc::size... Dimensions>
+    auto get_byte_size(hmpc::comp::tensor<T, Dimensions...>& tensor)
+    {
+        return tensor.get().byte_size();
+    }
+
+    template<typename T>
+    constexpr auto get_byte_size(T&)
+    {
+        constexpr auto bit_size = T::limb_size * T::limb_bit_size;
+        static_assert(std::numeric_limits<unsigned char>::digits == 8);
+        static_assert(bit_size % 8 == 0);
+        return bit_size / 8;
     }
 }

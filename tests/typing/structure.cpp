@@ -17,14 +17,16 @@ struct structured
     using is_structure = void;
     static constexpr hmpc::size size = 2;
 
-    constexpr auto& get(hmpc::size_constant<0>) const
+    template<typename Self>
+    constexpr auto&& get(this Self&& self, hmpc::size_constant<0>)
     {
-        return left;
+        return std::forward<Self>(self).left;
     }
 
-    constexpr auto& get(hmpc::size_constant<1>) const
+    template<typename Self>
+    constexpr auto&& get(this Self&& self, hmpc::size_constant<1>)
     {
-        return right;
+        return std::forward<Self>(self).right;
     }
 };
 

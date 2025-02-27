@@ -13,14 +13,16 @@ namespace hmpc::comp::crypto::lhe
         using is_structure = void;
         static constexpr hmpc::size size = 2;
 
-        constexpr auto& get(hmpc::size_constant<0>) const
+        template<typename Self>
+        constexpr auto&& get(this Self&& self, hmpc::size_constant<0>)
         {
-            return c0;
+            return std::forward<Self>(self).c0;
         }
 
-        constexpr auto& get(hmpc::size_constant<1>) const
+        template<typename Self>
+        constexpr auto&& get(this Self&& self, hmpc::size_constant<1>)
         {
-            return c1;
+            return std::forward<Self>(self).c1;
         }
     };
 }

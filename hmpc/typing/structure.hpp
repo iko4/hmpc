@@ -24,9 +24,30 @@ namespace hmpc
     template<typename T>
     concept collective_structure_element = requires
     {
-        std::remove_cvref_t<T>::rank;
         typename std::remove_cvref_t<T>::is_collective_structure_element;
     };
+
+    template<typename T, hmpc::size... Dimensions>
+    auto default_like(hmpc::comp::tensor<T, Dimensions...> const& tensor)
+    {
+        return hmpc::comp::make_tensor<T>(tensor.shape());
+    }
+
+    template<typename T>
+    auto default_like(T const&)
+    {
+        T value;
+        return value;
+    }
+
+    template<hmpc::structure T>
+    T default_like(T const& structure)
+    {
+        return hmpc::iter::for_packed_range<T::size>([&](auto... i)
+        {
+            return T::from_parts(default_like(structure.get(i))...);
+        });
+    }
 }
 
 namespace hmpc::typing
@@ -40,14 +61,19 @@ namespace hmpc::typing
         requires (I < std::remove_cvref_t<T>::size)
         struct structure_element<T, I>
         {
-            using type = decltype(std::declval<T>().get(hmpc::size_constant_of<I>));
+            using type = decltype(std::declval<T&&>().get(hmpc::size_constant_of<I>));
         };
 
         template<typename T, hmpc::size I>
         using structure_element_t = structure_element<T, I>::type;
 
+        template<typename... T>
+        struct structure_fields : public hmpc::size_constant<(structure_fields<T>::value + ...)>
+        {
+        };
+        
         template<typename T>
-        struct structure_fields : public hmpc::size_constant<1>
+        struct structure_fields<T> : public hmpc::size_constant<1>
         {
         };
 
@@ -61,37 +87,65 @@ namespace hmpc::typing
         {
         };
 
-        template<typename T>
-        constexpr hmpc::size structure_fields_v = structure_fields<T>::value;
+        template<typename... T>
+        constexpr hmpc::size structure_fields_v = structure_fields<T...>::value;
 
-        template<typename T, hmpc::size I, hmpc::size ElementIndex = 0>
-        struct structure_field;
-
-        template<hmpc::structure T, hmpc::size I, hmpc::size ElementIndex>
-        requires (hmpc::structure<structure_element_t<T, ElementIndex>> and structure_fields_v<structure_element_t<T, ElementIndex>> <= I)
-        struct structure_field<T, I, ElementIndex> : public structure_field<T, I - structure_fields_v<structure_element_t<T, ElementIndex>>, ElementIndex + 1>
+        namespace detail
         {
+            template<hmpc::size I, hmpc::size ElementIndex, typename... T>
+            struct structure_field_helper;
+    
+            template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
+            requires (structure_fields_v<T> <= I)
+            struct structure_field_helper<I, ElementIndex, T, Rest...>
+            {
+                using type = structure_field_helper<I - structure_fields_v<T>, 0, Rest...>::type;
+            };
+            
+            template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
+            requires (structure_fields_v<T> > I and hmpc::structure<T> and hmpc::structure<structure_element_t<T, ElementIndex>> and structure_fields_v<structure_element_t<T, ElementIndex>> <= I)
+            struct structure_field_helper<I, ElementIndex, T, Rest...>
+            {
+                using type = structure_field_helper<I - structure_fields_v<structure_element_t<T, ElementIndex>>, ElementIndex + 1, T>::type;
+            };
+    
+            template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
+            requires (structure_fields_v<T> > I and hmpc::structure<T> and hmpc::structure<structure_element_t<T, ElementIndex>> and structure_fields_v<structure_element_t<T, ElementIndex>> > I)
+            struct structure_field_helper<I, ElementIndex, T, Rest...>
+            {
+                using type = structure_field_helper<I, 0, structure_element_t<T, ElementIndex>>::type;
+            };
+    
+            template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
+            requires (structure_fields_v<T> > I and hmpc::structure<T> and not hmpc::structure<structure_element_t<T, ElementIndex>> and I > 0)
+            struct structure_field_helper<I, ElementIndex, T, Rest...>
+            {
+                using type = structure_field_helper<I - 1, ElementIndex + 1, T>::type;
+            };
+    
+            template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
+            requires (structure_fields_v<T> > I and hmpc::structure<T> and not hmpc::structure<structure_element_t<T, ElementIndex>> and I == 0)
+            struct structure_field_helper<I, ElementIndex, T, Rest...>
+            {
+                using type = structure_element<T, ElementIndex>::type;
+            };
+
+            template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
+            requires (structure_fields_v<T> > I and not hmpc::structure<T>)
+            struct structure_field_helper<I, ElementIndex, T, Rest...>
+            {
+                static_assert(I == 0);
+                using type = T;
+            };
+        }
+
+        template<hmpc::size I, typename... T>
+        struct structure_field
+        {
+            using type = detail::structure_field_helper<I, 0, T...>::type;
         };
 
-        template<hmpc::structure T, hmpc::size I, hmpc::size ElementIndex>
-        requires (hmpc::structure<structure_element_t<T, ElementIndex>> and structure_fields_v<structure_element_t<T, ElementIndex>> > I)
-        struct structure_field<T, I, ElementIndex> : public structure_field<structure_element_t<T, ElementIndex>, I>
-        {
-        };
-
-        template<hmpc::structure T, hmpc::size I, hmpc::size ElementIndex>
-        requires (not hmpc::structure<structure_element_t<T, ElementIndex>> and I > 0)
-        struct structure_field<T, I, ElementIndex> : public structure_field<T, I - 1, ElementIndex + 1>
-        {
-        };
-
-        template<hmpc::structure T, hmpc::size I, hmpc::size ElementIndex>
-        requires (not hmpc::structure<structure_element_t<T, ElementIndex>> and I == 0)
-        struct structure_field<T, I, ElementIndex> : public structure_element<T, ElementIndex>
-        {
-        };
-
-        template<typename T, hmpc::size I>
-        using structure_field_t = structure_field<T, I>::type;
+        template<hmpc::size I, typename... T>
+        using structure_field_t = structure_field<I, T...>::type;
     }
 }
