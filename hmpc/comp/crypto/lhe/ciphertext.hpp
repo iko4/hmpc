@@ -24,5 +24,10 @@ namespace hmpc::comp::crypto::lhe
         {
             return std::forward<Self>(self).c1;
         }
+
+        static constexpr auto from_parts(hmpc::comp::tensor<Poly, Dimensions...>&& c0, hmpc::comp::tensor<Poly, Dimensions...>&& c1)
+        {
+            return ciphertext{std::move(c0), std::move(c1)};
+        }
     };
 }
