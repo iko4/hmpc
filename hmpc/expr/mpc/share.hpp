@@ -117,6 +117,16 @@ namespace hmpc::expr::mpc
                 return *this;
             }
         }
+
+        template<typename Left>
+        friend constexpr auto operator*(Left left, share_expression right)
+        {
+            using namespace hmpc::expr::operators;
+            return share_expression<decltype(left * right.value), Id, Parties...>{left * right.value};
+        }
+
+        template<typename Other, hmpc::net::party_id OtherId, hmpc::net::party_id... OtherParties>
+        friend constexpr auto operator*(share_expression<Other, OtherId, OtherParties...> left, share_expression right) = delete;
     };
 
     template<typename T, hmpc::net::party_id Id, hmpc::net::party_id... Parties>
