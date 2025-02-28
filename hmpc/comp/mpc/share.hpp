@@ -31,10 +31,16 @@ namespace hmpc::comp::mpc
             return s::from_parts(std::forward<Self>(self).values[I]);
         }
 
+        template<typename State>
+        static constexpr auto empty_from(State state)
+        {
+            return from_parts(hmpc::empty_default<T>((static_cast<void>(Parties), state))...);
+        }
+
         template<hmpc::typing::universal_reference_to_rvalue... Parts>
         static constexpr auto from_parts(Parts&&... parts)
         {
-            return shares{std::move(parts)...};
+            return shares<std::common_type_t<std::remove_cvref_t<Parts>...>, Parties...>{std::move(parts)...};
         }
 
         static constexpr auto from_parts(share<T, Parties, Parties...>&&... parts)
@@ -79,7 +85,7 @@ namespace hmpc::comp::mpc
             return share{std::forward<Part>(part)};
         }
 
-        static constexpr auto default_owner_from(share&& share)
+        static constexpr auto default_owner_with(share&& share)
         {
             using owner = shares<T, Parties...>;
             return owner::from_parts([&]()

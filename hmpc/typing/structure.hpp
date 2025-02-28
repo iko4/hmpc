@@ -34,7 +34,7 @@ namespace hmpc
     }
 
     template<typename T>
-    auto default_like(T const&)
+    T default_like(T const&)
     {
         T value;
         return value;
@@ -46,6 +46,28 @@ namespace hmpc
         return hmpc::iter::for_packed_range<T::size>([&](auto... i)
         {
             return T::from_parts(default_like(structure.get(i))...);
+        });
+    }
+
+    template<typename T, hmpc::size... Dimensions>
+    auto empty_default(hmpc::shape<Dimensions...> shape)
+    {
+        return hmpc::comp::make_tensor<T>(shape);
+    }
+
+    template<typename T>
+    T empty_default(hmpc::shapeless_tag)
+    {
+        T value;
+        return value;
+    }
+
+    template<hmpc::structure T, typename State>
+    T empty_default(State state)
+    {
+        return hmpc::iter::for_packed_range<T::size>([&](auto... i)
+        {
+            return T::from_parts(empty_default((static_cast<void>(i), state))...);
         });
     }
 }

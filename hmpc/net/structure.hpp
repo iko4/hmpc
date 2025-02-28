@@ -10,6 +10,30 @@
 
 namespace hmpc::net
 {
+    template<typename T, party_id... Parties, typename State>
+    auto make_empty_result_storage(communicator<Parties...>, State state)
+    {
+        if constexpr (hmpc::collective_structure<T>)
+        {
+            return T::empty_from(state);
+        }
+        else
+        {
+            return std::array
+            {
+                empty_default<T>((static_cast<void>(Parties), state))...
+            };
+        }
+    }
+
+    template<typename... Ts, party_id... Parties, typename... States>
+    auto make_empty_multi_result_storage(communicator<Parties...> communicator, States... states)
+    {
+        return std::make_tuple(
+            make_empty_result_storage<Ts>(communicator, states)...
+        );
+    }
+
     template<hmpc::typing::universal_reference_to_rvalue T, party_id Id, party_id... Parties>
     auto make_result_storage_with(hmpc::party_constant<Id> id, communicator<Parties...> communicator, T&& value)
     {
@@ -17,7 +41,7 @@ namespace hmpc::net
 
         if constexpr (hmpc::collective_structure_element<T>)
         {
-            return T::default_owner_from(std::move(value));
+            return T::default_owner_with(std::move(value));
         }
         else
         {
