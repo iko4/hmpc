@@ -76,6 +76,19 @@ namespace hmpc::typing
 {
     namespace traits
     {
+        template<typename T>
+        struct is_tuple : std::false_type
+        {
+        };
+
+        template<typename... T>
+        struct is_tuple<std::tuple<T...>> : std::true_type
+        {
+        };
+
+        template<typename T>
+        constexpr bool is_tuple_v = is_tuple<T>::value;
+
         template<typename T, hmpc::size I>
         struct structure_element;
 

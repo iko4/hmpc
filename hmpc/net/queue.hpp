@@ -251,7 +251,7 @@ namespace hmpc::net
             requires (Receiver == Id and not ((Parties == Id) or ...))
         auto gather(communicator<Parties...> communicator, hmpc::party_constant<Receiver>, auto const& shape)
         {
-            auto result = make_result_storage<T>(communicator, shape);
+            auto result = make_empty_result_storage<T>(communicator, shape);
 
             using tensor_type = std::tuple_element_t<0, decltype(result)>;
             using limb_type = tensor_type::limb_type;
@@ -322,29 +322,35 @@ namespace hmpc::net
 
             constexpr hmpc::size count = sizeof...(Ts);
 
-            auto result = make_new_2d_result_storage<Ts...>(communicator, shapes...);
+            auto result = make_empty_multi_result_storage<Ts...>(communicator, shapes...);
 
-            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
+            auto extended_receivers = hmpc::iter::scan_range<count>([&](auto i, auto parties)
             {
-                return std::array
+                constexpr hmpc::size fields = hmpc::typing::traits::structure_fields_v<std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>>;
+                return hmpc::iter::scan_range<fields>([&](auto, auto parties)
                 {
-                    [&]()
+                    return parties.append(receivers.get(i));
+                }, parties);
+            }, hmpc::net::communicator_for<>);
+
+            auto metadata = hmpc::iter::for_range<count>([&](auto... i)
+            {
+                return hmpc::iter::collect_enumerated([&]<typename Tensor>(auto j, Tensor&& tensor)
+                {
+                    using limb_type = std::remove_cvref_t<Tensor>::limb_type;
+
+                    hmpc::net::message_size byte_size = get_byte_size(tensor);
+
+                    return hmpc::ffi::GatherMetadata
                     {
-                        using limb_type = std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>::limb_type;
-
-                        hmpc::net::message_size byte_size = get_byte_size(std::get<0>(std::get<i>(result)));
-
-                        return hmpc::ffi::GatherMetadata
-                        {
-                            .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                            .receiver = receivers.get(i),
-                            .size = byte_size,
-                        };
-                    }()...
-                };
+                        .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
+                        .receiver = extended_receivers.get(j),
+                        .size = byte_size,
+                    };
+                }, get<0>(get<i>(result))...);
             });
 
-            auto accessors = make_multi_accessors(communicator, result);
+            auto accessors = make_multi_accessors(id, communicator, result);
 
             auto data = make_multi_data_ptrs(communicator, accessors);
 
@@ -369,8 +375,8 @@ namespace hmpc::net
             static_assert(sizeof...(Receivers) == sizeof...(Tensors));
 
             using tensor_types = std::tuple<Tensors...>;
-            constexpr hmpc::size size = sizeof...(Tensors);
-            auto expanded_receivers = hmpc::iter::scan_range<size>([&](auto i, auto parties)
+            constexpr hmpc::size count = sizeof...(Tensors);
+            auto extended_receivers = hmpc::iter::scan_range<count>([&](auto i, auto parties)
             {
                 constexpr hmpc::size fields = hmpc::typing::traits::structure_fields_v<std::tuple_element_t<i, tensor_types>>;
                 return hmpc::iter::scan_range<fields>([&](auto, auto parties)
@@ -388,7 +394,7 @@ namespace hmpc::net
                 return hmpc::ffi::GatherMetadata
                 {
                     .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                    .receiver = expanded_receivers.get(i),
+                    .receiver = extended_receivers.get(i),
                     .size = byte_size,
                 };
             }, tensors...);
@@ -398,7 +404,7 @@ namespace hmpc::net
                 return make_accessor(id, id, tensor);
             }, tensors...);
 
-            auto data = make_data_ptrs(expanded_receivers, accessors);
+            auto data = make_data_ptrs(extended_receivers, accessors);
 
             if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_multi_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(communicator), detail::to_outer_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
@@ -415,26 +421,44 @@ namespace hmpc::net
         {
             static_assert(((Parties == Id) or ...));
 
-            using limb_type = Tensor::limb_type;
-
-            hmpc::net::message_size byte_size = get_byte_size(tensor);
-
-            auto metadata = hmpc::ffi::AllGatherMetadata
+            auto metadata = hmpc::iter::collect([&]<typename T>(T&& tensor)
             {
-                .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                .size = byte_size,
-            };
+                using limb_type = std::remove_cvref_t<T>::limb_type;
+
+                hmpc::net::message_size byte_size = get_byte_size(tensor);
+
+                return hmpc::ffi::AllGatherMetadata
+                {
+                    .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
+                    .size = byte_size,
+                };
+            }, tensor);
 
             auto result = make_result_storage_with(id, communicator, std::move(tensor));
 
             auto accessors = make_accessors(id, communicator, result);
 
-            auto data = make_data_ptrs(communicator, accessors);
-
-            if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_all_gather(handle.get(), metadata, detail::to_ffi(communicator), detail::to_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+            if constexpr (is_multi_accessor(accessors))
             {
-                hmpc::ffi::throw_exception(errc);
+                auto data = make_multi_data_ptrs(communicator, accessors);
+
+                if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(communicator), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+                {
+                    hmpc::ffi::throw_exception(errc);
+                }
             }
+            else
+            {
+                static_assert(std::tuple_size_v<decltype(metadata)> == 1);
+
+                auto data = make_data_ptrs(communicator, accessors);
+
+                if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_all_gather(handle.get(), std::get<0>(metadata), detail::to_ffi(communicator), detail::to_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+                {
+                    hmpc::ffi::throw_exception(errc);
+                }
+            }
+
 
             return result;
         }
@@ -447,21 +471,18 @@ namespace hmpc::net
             requires ((Parties == Id) or ...)
         auto all_gather(communicator<Parties...> communicator, Tensors&&... tensors)
         {
-            auto metadata = std::array
+            auto metadata = hmpc::iter::collect([&]<typename Tensor>(Tensor&& tensor)
             {
-                [&]()
+                using limb_type = std::remove_cvref_t<Tensor>::limb_type;
+
+                hmpc::net::message_size byte_size = get_byte_size(tensor);
+
+                return hmpc::ffi::AllGatherMetadata
                 {
-                    using limb_type = Tensors::limb_type;
-
-                    hmpc::net::message_size byte_size = get_byte_size(tensors);
-
-                    return hmpc::ffi::AllGatherMetadata
-                    {
-                        .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                        .size = byte_size,
-                    };
-                }()...
-            };
+                    .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
+                    .size = byte_size,
+                };
+            }, tensors...);
 
             auto result = make_multi_result_storage_with(id, communicator, std::move(tensors)...);
 
@@ -485,25 +506,42 @@ namespace hmpc::net
             requires ((Senders == Id) or ...)
         auto all_gather(communicator<Senders...> senders, communicator<Receivers...> receivers, Tensor&& tensor)
         {
-            using limb_type = Tensor::limb_type;
-
-            hmpc::net::message_size byte_size = get_byte_size(tensor);
-
-            auto metadata = hmpc::ffi::AllGatherMetadata
+            auto metadata = hmpc::iter::collect([&]<typename T>(T&& tensor)
             {
-                .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                .size = byte_size,
-            };
+                using limb_type = std::remove_cvref_t<T>::limb_type;
+
+                hmpc::net::message_size byte_size = get_byte_size(tensor);
+
+                return hmpc::ffi::AllGatherMetadata
+                {
+                    .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
+                    .size = byte_size,
+                };
+            }, tensor);
 
             auto result = make_result_storage_with(id, senders, std::move(tensor));
 
             auto accessors = make_accessors(id, senders, result);
 
-            auto data = make_data_ptrs(senders, accessors);
-
-            if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_all_gather(handle.get(), metadata, detail::to_ffi(senders), detail::to_ffi(receivers), detail::to_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+            if constexpr (is_multi_accessor(accessors))
             {
-                hmpc::ffi::throw_exception(errc);
+                auto data = make_multi_data_ptrs(senders, accessors);
+
+                if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(senders), detail::to_ffi(receivers), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+                {
+                    hmpc::ffi::throw_exception(errc);
+                }
+            }
+            else
+            {
+                static_assert(std::tuple_size_v<decltype(metadata)> == 1);
+
+                auto data = make_data_ptrs(senders, accessors);
+
+                if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_all_gather(handle.get(), std::get<0>(metadata), detail::to_ffi(senders), detail::to_ffi(receivers), detail::to_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+                {
+                    hmpc::ffi::throw_exception(errc);
+                }
             }
 
             return result;
@@ -516,7 +554,7 @@ namespace hmpc::net
             requires (not ((Senders == Id) or ...))
         auto all_gather(communicator<Senders...> senders, communicator<Receivers...> receivers, auto const& shape)
         {
-            auto result = make_result_storage<T>(senders, shape);
+            auto result = make_empty_result_storage<T>(senders, shape);
 
             using tensor_type = std::tuple_element_t<0, decltype(result)>;
             using limb_type = tensor_type::limb_type;
@@ -585,34 +623,91 @@ namespace hmpc::net
         {
             constexpr hmpc::size count = sizeof...(Ts);
 
-            auto result = make_new_2d_result_storage<Ts...>(senders, shapes...);
+            auto result = make_empty_multi_result_storage<Ts...>(senders, shapes...);
 
-            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
+            auto extended_receivers = hmpc::iter::scan_range<count>([&](auto i, auto parties)
             {
-                return std::array
+                constexpr hmpc::size fields = hmpc::typing::traits::structure_fields_v<std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>>;
+                return hmpc::iter::scan_range<fields>([&](auto, auto parties)
                 {
-                    [&]()
+                    return parties.append(receivers.get(i));
+                }, parties);
+            }, hmpc::net::communicator_for<>);
+
+            auto metadata = hmpc::iter::for_range<count>([&](auto... i)
+            {
+                return hmpc::iter::collect([&]<typename Tensor>(Tensor&& tensor)
+                {
+                    using limb_type = std::remove_cvref_t<Tensor>::limb_type;
+
+                    hmpc::net::message_size byte_size = get_byte_size(tensor);
+
+                    return hmpc::ffi::AllGatherMetadata
                     {
-                        using limb_type = std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>::limb_type;
-
-                        hmpc::net::message_size byte_size = get_byte_size(std::get<0>(std::get<i>(result)));
-
-                        return hmpc::ffi::AllGatherMetadata
-                        {
-                            .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                            .size = byte_size,
-                        };
-                    }()...
-                };
+                        .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
+                        .size = byte_size,
+                    };
+                }, get<0>(get<i>(result))...);
             });
 
             auto accessors = make_multi_accessors(id, senders, result);
 
             auto data = make_multi_data_ptrs(senders, accessors);
 
-            if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(senders), detail::to_ffi(receivers), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+            if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(senders), detail::to_ffi(extended_receivers), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
                 hmpc::ffi::throw_exception(errc);
+            }
+
+            return result;
+        }
+
+        /// All-to-all (as sender and receiver)
+        ///
+        /// Send `tensor[i]` to `communicator[i]` and receive one tensor for each sent tensor.
+        template<party_id... Parties, hmpc::typing::universal_reference_to_rvalue Tensor>
+            requires ((Parties == Id) or ...)
+        auto all_to_all(communicator<Parties...> communicator, Tensor&& tensor)
+        {
+            static_assert(std::tuple_size_v<std::remove_cvref_t<Tensor>> == communicator.size);
+
+            auto result = make_result_storage_with(
+                id,
+                communicator,
+                auto(std::get<communicator.index_of(id)>(tensor)) // copy to not use a moved-from object later
+            );
+
+            auto send = std::forward<Tensor>(tensor);
+
+            auto send_accessors = make_accessors(id, hmpc::net::communicator{(static_cast<void>(Parties), id)...}, send);
+            auto receive_accessors = make_accessors(id, communicator, result);
+
+            if constexpr (is_multi_accessor(send_accessors))
+            {
+                auto send_data = make_multi_data_ptrs(communicator, send_accessors);
+                auto receive_data = make_multi_data_ptrs(communicator, receive_accessors);
+
+                auto metadata = hmpc::iter::collect([&]<typename T>(T&& tensor)
+                {
+                    using limb_type = std::remove_cvref_t<T>::limb_type;
+
+                    hmpc::net::message_size byte_size = get_byte_size(tensor);
+
+                    return hmpc::ffi::AllToAllMetadata
+                    {
+                        .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
+                        .size = byte_size,
+                    };
+                }, std::get<0>(send));
+
+                if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_multi_all_to_all(handle.get(), detail::to_ffi(metadata), detail::to_ffi(communicator), detail::to_2d_ffi(send_data), detail::to_2d_ffi(receive_data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+                {
+                    hmpc::ffi::throw_exception(errc);
+                }
+            }
+            else
+            {
+                static_assert(not is_multi_accessor(send_accessors));
             }
 
             return result;
@@ -633,31 +728,25 @@ namespace hmpc::net
             auto result = make_multi_result_storage_with(
                 id,
                 communicator,
-                auto(std::get<communicator.index_of(hmpc::party_constant_of<Id>)>(tensors))... // copy to not use a moved-from object later
+                auto(std::get<communicator.index_of(id)>(tensors))... // copy to not use a moved-from object later
             );
 
-            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
+            auto metadata = hmpc::iter::collect([&]<typename Tensor>(Tensor&& tensor)
             {
-                return std::array
+                using limb_type = std::remove_cvref_t<Tensor>::limb_type;
+
+                hmpc::net::message_size byte_size = get_byte_size(tensor);
+
+                return hmpc::ffi::AllToAllMetadata
                 {
-                    [&]()
-                    {
-                        using limb_type = std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>::limb_type;
-
-                        hmpc::net::message_size byte_size = get_byte_size(std::get<0>(std::get<i>(result)));
-
-                        return hmpc::ffi::AllToAllMetadata
-                        {
-                            .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                            .size = byte_size,
-                        };
-                    }()...
+                    .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
+                    .size = byte_size,
                 };
-            });
+            }, std::get<0>(tensors)...);
 
             auto send = std::make_tuple(std::forward<Tensors>(tensors)...);
 
-            auto send_accessors = make_multi_accessors(id, communicator, send);
+            auto send_accessors = make_multi_accessors(id, hmpc::net::communicator{(static_cast<void>(Parties), id)...}, send);
             auto receive_accessors = make_multi_accessors(id, communicator, result);
 
             auto send_data = make_multi_data_ptrs(communicator, send_accessors);

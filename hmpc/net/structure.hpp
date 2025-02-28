@@ -120,7 +120,7 @@ namespace hmpc::net
                         make_accessor(
                             id,
                             communicator.get(i),
-                            hmpc::iter::at(std::get<i>(values), j)
+                            hmpc::iter::at(get<i>(values), j)
                         )...
                     );
                 });
@@ -218,7 +218,7 @@ namespace hmpc::net
     template<typename... Ts>
     constexpr auto is_multi_accessor(std::tuple<Ts...>&) noexcept
     {
-        if constexpr (requires { (std::tuple_size_v<Ts>, ...); })
+        if constexpr ((hmpc::typing::traits::is_tuple_v<Ts> and ...))
         {
             return hmpc::constants::yes;
         }
