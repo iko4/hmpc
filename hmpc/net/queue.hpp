@@ -333,7 +333,7 @@ namespace hmpc::net
                 }, parties);
             }, hmpc::net::communicator_for<>);
 
-            auto metadata = hmpc::iter::for_range<count>([&](auto... i)
+            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
             {
                 return hmpc::iter::collect_enumerated([&]<typename Tensor>(auto j, Tensor&& tensor)
                 {
@@ -625,16 +625,7 @@ namespace hmpc::net
 
             auto result = make_empty_multi_result_storage<Ts...>(senders, shapes...);
 
-            auto extended_receivers = hmpc::iter::scan_range<count>([&](auto i, auto parties)
-            {
-                constexpr hmpc::size fields = hmpc::typing::traits::structure_fields_v<std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>>;
-                return hmpc::iter::scan_range<fields>([&](auto, auto parties)
-                {
-                    return parties.append(receivers.get(i));
-                }, parties);
-            }, hmpc::net::communicator_for<>);
-
-            auto metadata = hmpc::iter::for_range<count>([&](auto... i)
+            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
             {
                 return hmpc::iter::collect([&]<typename Tensor>(Tensor&& tensor)
                 {
@@ -654,7 +645,7 @@ namespace hmpc::net
 
             auto data = make_multi_data_ptrs(senders, accessors);
 
-            if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(senders), detail::to_ffi(extended_receivers), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
+            if (auto errc = hmpc::ffi::hmpc_ffi_net_queue_extended_multi_all_gather(handle.get(), detail::to_ffi(metadata), detail::to_ffi(senders), detail::to_ffi(receivers), detail::to_2d_ffi(data)); errc != hmpc::ffi::SendReceiveErrc::ok)
             {
                 hmpc::ffi::throw_exception(errc);
             }
