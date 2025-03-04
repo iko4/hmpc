@@ -103,7 +103,10 @@ USER hmpc-dev
 # container image to build hmpc
 FROM dev-default AS hmpc-builder
 COPY --chown=hmpc-dev:hmpc-dev . /workspaces/hmpc
-RUN cmake --preset default -B /home/hmpc-dev/build -DHMPC_BUILD_TESTING=OFF -DHMPC_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/home/hmpc-dev/install \
+ARG cuda_arch=sm_70
+ENV CUDA_ARCH=${cuda_arch}
+RUN --mount=type=bind,from=cuda,target=$CUDA_PATH \
+    cmake --preset cuda -B /home/hmpc-dev/build -DHMPC_CUDA_ARCH=$CUDA_ARCH -DHMPC_BUILD_TESTING=OFF -DHMPC_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=/home/hmpc-dev/install \
  && cmake --build /home/hmpc-dev/build --config Release --target install
 
 # hmpc container image (to use hmpc as a dependency)
