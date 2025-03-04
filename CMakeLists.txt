@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25.0)
 
 project(hmpc
-    VERSION 0.5.1
+    VERSION 0.5.2
     DESCRIPTION "An HPC-inspired MPC library"
     HOMEPAGE_URL "https://github.com/iko4/hmpc"
     LANGUAGES CXX
