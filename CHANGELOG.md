@@ -11,6 +11,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 - Make library (and binary tools) installable and support finding it (cmake).
 - "default" workflow (cmake).
 - Separate "development" and "library-development" container image targets.
+- MPC API for simple secret-sharing.
 
 ## Changed
 

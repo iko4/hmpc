@@ -29,7 +29,17 @@ One solution to avoid this is [differential privacy (DP)](https://en.wikipedia.o
 
 ### Secret-Sharing
 
-[TODO]
+*Secret-sharing* is a technique to allow multiple parties to perform some computations on data, without knowing the underlying data.
+Only if enough parties come together, they can reconstruct a secret together.
+We use simple full-threshold secret-sharing, where all parties have to be involved to reconstruct the secret.
+For a secret $x$ and $n$ parties, we write $[x]_i$ for party $P_i$'s share.
+Reconstruction is simply the sum of all shares:
+
+```math
+x = \sum_{i = 0}^{n} [x]_i
+```
+
+By selecting all shares $[x]_i$ uniformly at random (under the condition that they sum up to a specific secret), a party that shares a secret can ensure that a single share, or even up to $n - 1$ shares, reveal no information about the secret.
 
 ### Homomorphic Encryption
 
