@@ -202,14 +202,14 @@ Each party receives different data.
 
 ```cpp
 // party 0
-auto [x0, y0, z0] = make_tensors<T>(shape, ...);
-auto [x0, x1, x2] = net.all_to_all(parties, std::move(x0), std::move(y0), std::move(z0));
+auto tensors0 = make_tensors<T>(shape, ...); // auto [x0, y0, z0] = tensors0;
+auto [x0, x1, x2] = net.all_to_all(parties, std::move(tensors0));
 // party 1
-auto [x1, y1, z1] = make_tensors<T>(shape, ...);
-auto [y0, y1, y2] = net.all_to_all(parties, std::move(x1), std::move(y1), std::move(z1));
+auto tensors1 = make_tensors<T>(shape, ...); // auto [x1, y1, z1] = tensors1;
+auto [y0, y1, y2] = net.all_to_all(parties, std::move(tensors1));
 // party 2
-auto [x2, y2, z2] = make_tensors<T>(shape, ...);
-auto [z0, z1, z2] = net.all_to_all(parties, std::move(x2), std::move(y2), std::move(z2));
+auto tensors2 = make_tensors<T>(shape, ...); // auto [x2, y2, z2] = tensors2;
+auto [z0, z1, z2] = net.all_to_all(parties, std::move(tensors2));
 ```
 
 
