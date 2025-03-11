@@ -6,7 +6,8 @@
 ARG packages_for=mpspdz
 
 # base container image
-FROM intel/oneapi-runtime@sha256:060ba4aa60a58add8d1d39fd49cd7b3bf274dde0f8ea4a988fdf6eb57abab97e AS base-ubuntu
+# intel/oneapi-runtime:2025.0.2-0-devel-ubuntu24.04
+FROM intel/oneapi-runtime@sha256:a45035d3db1a60f8811bcc4fbfe2e08edc92fe01464c1f314eeff1f352f44c12 AS base-ubuntu
 
 # container image to build LLVM/dpcpp from source
 FROM base-ubuntu AS dpcpp-builder
@@ -18,16 +19,16 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -
 WORKDIR /workspaces/dpcpp
 ARG configure_env=""
 ARG configure_features="--native_cpu --llvm-external-projects=clang-tools-extra,compiler-rt,openmp"
-ARG compile_parallelism=""
+ARG compile_flags=""
 ENV CONFIGURE_ENV=${configure_env}
 ENV CONFIGURE_FEATURES=${configure_features}
-ENV COMPILE_PARALLELISM=${compile_parallelism}
+ENV COMPILE_FLAGS=${compile_flags}
 RUN git clone https://github.com/intel/llvm --branch nightly-2025-01-02 --depth=1 \
- && env ${CONFIGURE_ENV} python3 /workspaces/dpcpp/llvm/buildbot/configure.py ${CONFIGURE_FEATURES} \
- && python3 /workspaces/dpcpp/llvm/buildbot/compile.py ${COMPILE_PARALLELISM} \
- && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=clang-tidy ${COMPILE_PARALLELISM} \
- && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=omp ${COMPILE_PARALLELISM} \
- && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=install ${COMPILE_PARALLELISM}
+ && env $CONFIGURE_ENV python3 /workspaces/dpcpp/llvm/buildbot/configure.py $CONFIGURE_FEATURES \
+ && python3 /workspaces/dpcpp/llvm/buildbot/compile.py $COMPILE_FLAGS \
+ && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=clang-tidy $COMPILE_FLAGS \
+ && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=omp $COMPILE_FLAGS \
+ && python3 /workspaces/dpcpp/llvm/buildbot/compile.py --build-target=install $COMPILE_FLAGS
 
 # base development container image
 FROM base-ubuntu AS dev-base
@@ -43,12 +44,20 @@ ENV CPATH=$LLVM_ROOT/include:$LLVM_ROOT/include/sycl:$CPATH
 COPY --from=dpcpp-builder /workspaces/dpcpp/llvm/build/install/ $LLVM_ROOT
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends \
     curl zip unzip tar git \
-    build-essential ninja-build \
-    python3-pip \
+    build-essential g++-14 ninja-build \
+    python3-pip python3-venv \
     iproute2 iputils-ping \
     && rm -rf /var/lib/apt/lists/* \
- && groupadd -g ${group_id:?} --non-unique hmpc-dev \
- && useradd --create-home -u ${user_id:?} -g ${group_id:?} --shell /bin/bash hmpc-dev \
+ && ( \
+    groupadd -g ${group_id:?} hmpc-dev \
+    || \
+    groupmod -g ${group_id:?} --new-name hmpc-dev $(id -gn ${group_id:?}) \
+    ) \
+ && ( \
+    useradd --create-home --home-dir /home/hmpc-dev -u ${user_id:?} -g ${group_id:?} --shell /bin/bash hmpc-dev \
+    || \
+    usermod --move-home --home /home/hmpc-dev -u ${user_id:?} -g ${group_id:?} --shell /bin/bash --login hmpc-dev $(id -un ${user_id:?}) \
+    ) \
  && mkdir -p $CMAKE_ROOT \
  && cd $CMAKE_ROOT \
  && curl -sSfLO https://github.com/Kitware/CMake/releases/download/v3.31.5/cmake-3.31.5-linux-x86_64.sh \
@@ -68,7 +77,11 @@ RUN --mount=type=bind,source=requirements.txt,target=/home/hmpc-dev/requirements
  && cd /workspaces \
  && git clone https://github.com/microsoft/vcpkg --depth=1 \
  && $VCPKG_ROOT/bootstrap-vcpkg.sh -disableMetrics \
+ && python3 -m venv /home/hmpc-dev/venv \
+ && . /home/hmpc-dev/venv/bin/activate \
  && pip3 install -r $HOME/requirements.txt --no-warn-script-location
+ENV VIRTUAL_ENV=/home/hmpc-dev/venv
+ENV PATH=$VIRTUAL_ENV/bin:$PATH
 WORKDIR /workspaces/hmpc
 
 # development container image with extra packages for MP-SPDZ

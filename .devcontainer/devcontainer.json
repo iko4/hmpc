@@ -8,12 +8,6 @@
 
     "remoteUser": "hmpc-dev",
 
-    "runArgs":
-    [
-        "--device=/dev/dri",
-        "--net=host"
-    ],
-
     "customizations":
     {
         "vscode":

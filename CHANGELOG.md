@@ -4,6 +4,13 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased
+
+### Changed
+
+- Update container image to Ubuntu 24.04.
+
+
 ## Version 0.5.2 - 2025-03-04
 
 ### Added
