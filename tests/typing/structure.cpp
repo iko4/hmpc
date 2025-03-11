@@ -88,10 +88,10 @@ TEST_CASE("Structure", "[typing][structure]")
     REQUIRE(strings[1] == "float");
     REQUIRE(strings[2] == "string");
 
-    auto tuple = hmpc::iter::collect(r, [](auto value){ return value; });
+    auto tuple = hmpc::iter::collect([](auto value){ return value; }, r);
     REQUIRE(std::same_as<decltype(tuple), std::tuple<int, float, std::string>>);
 
-    auto array = hmpc::iter::collect(r, [&](auto value){ return v(value); });
+    auto array = hmpc::iter::collect(v, r);
     REQUIRE(std::same_as<decltype(array), std::array<std::string_view, 3>>);
     REQUIRE(array == strings);
 
