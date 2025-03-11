@@ -16,7 +16,8 @@ use super::{make_addr, Config, NetCommand, PartyID, SendMessage};
 async fn make_client(config: &Config) -> quinn::Endpoint
 {
     // TODO: Use other wildcard address to bind to
-    let mut endpoint = quinn::Endpoint::client("0.0.0.0:0".parse().unwrap()).unwrap();
+    // TODO: Could make IPv4/IPv6 configurable
+    let mut endpoint = quinn::Endpoint::client((std::net::Ipv6Addr::UNSPECIFIED, 0).into()).unwrap();
     endpoint.set_default_client_config(make_client_config(config).await);
     endpoint
 }

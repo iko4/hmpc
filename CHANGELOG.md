@@ -12,6 +12,10 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 - Upgrade to Rust edition 2024.
 - Format via standard library instead of fmt library.
 
+### Fixed
+
+- Support IPv6.
+
 
 ## Version 0.5.2 - 2025-03-04
 
