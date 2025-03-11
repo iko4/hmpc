@@ -5,9 +5,6 @@
 #include <type_traits>
 #include <variant>
 
-#define HMPC_FMTLIB ::fmt
-// conditionally include <format> or <fmt/format.h> dependend on HMPC_FMTLIB
-#include <fmt/format.h>
 
 #ifndef HMPC_ASSERT_LEVEL
     #ifdef HMPC_TESTING
@@ -18,10 +15,11 @@
 #endif
 
 #if HMPC_ASSERT_LEVEL > 0
+    #include <format>
     #include <source_location>
     #include <stdexcept>
     #define HMPC_NOEXCEPT
-    #define HMPC_ASSERT(check) (hmpc::bool_cast(check)) ? static_cast<void>(0) : []() { constexpr auto location = std::source_location::current(); throw std::runtime_error(HMPC_FMTLIB::format("{}:{}:\n" "  Assertion failed: {}\n  in function: {}", location.file_name(), location.line(), #check, location.function_name())); }()
+    #define HMPC_ASSERT(check) (hmpc::bool_cast(check)) ? static_cast<void>(0) : []() { constexpr auto location = std::source_location::current(); throw std::runtime_error(std::format("{}:{}:\n" "  Assertion failed: {}\n  in function: {}", location.file_name(), location.line(), #check, location.function_name())); }()
 #else
     #define HMPC_NOEXCEPT noexcept(true)
     #define HMPC_ASSERT(...) static_cast<void>(0)

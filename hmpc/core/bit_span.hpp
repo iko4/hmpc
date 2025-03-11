@@ -15,6 +15,8 @@
 #include <hmpc/detail/utility.hpp>
 #include <hmpc/iter/scan_reverse_range.hpp>
 
+#include <format>
+
 namespace hmpc
 {
     namespace detail
@@ -315,7 +317,7 @@ namespace hmpc::core
 }
 
 template<hmpc::read_only_bit_span Span, typename Char>
-struct HMPC_FMTLIB::formatter<Span, Char>
+struct std::formatter<Span, Char>
 {
     static constexpr bool is_specialized = true;
 
@@ -334,7 +336,7 @@ struct HMPC_FMTLIB::formatter<Span, Char>
         static_assert(Span::limb_bit_size % 4 == 0);
         return hmpc::iter::scan_reverse_range<Span::limb_size>([&](auto i, auto out)
         {
-            return HMPC_FMTLIB::format_to(out, "{:0{}x}", span.read(i).data, Span::limb_bit_size / 4);
-        }, HMPC_FMTLIB::format_to(ctx.out(), "0x"));
+            return std::format_to(out, "{:0{}x}", span.read(i).data, Span::limb_bit_size / 4);
+        }, std::format_to(ctx.out(), "0x"));
     }
 };

@@ -54,7 +54,7 @@ namespace hmpc::comp
 /// - 'u': adds units ("b" for bits)
 /// - 'U': adds units ("B" for bytes)
 template<typename Char>
-struct HMPC_FMTLIB::formatter<hmpc::comp::device_limits, Char>
+struct std::formatter<hmpc::comp::device_limits, Char>
 {
     static constexpr bool is_specialized = true;
 
@@ -94,7 +94,7 @@ struct HMPC_FMTLIB::formatter<hmpc::comp::device_limits, Char>
         }
         if (*it != Char{'}'})
         {
-            throw HMPC_FMTLIB::format_error("Invalid format specifier");
+            throw std::format_error("Invalid format specifier");
         }
 
         return it;
@@ -105,23 +105,23 @@ struct HMPC_FMTLIB::formatter<hmpc::comp::device_limits, Char>
         auto out = ctx.out();
         if (not no_braces)
         {
-            out = HMPC_FMTLIB::format_to(out, "{{");
+            out = std::format_to(out, "{{");
         }
 
-        out = HMPC_FMTLIB::format_to(out, "compute units: {}, sub devices: {}, work item dimensions: {}, work item size: {} or ({}, {}) or ({}, {}, {}), work group size: {}, sub groups: {}, parameter size: ", limits.compute_units, limits.sub_devices, limits.work_item_dimensions, limits.work_item_size_1d, limits.work_item_size_2d[0], limits.work_item_size_2d[1], limits.work_item_size_3d[0], limits.work_item_size_3d[1], limits.work_item_size_3d[2], limits.work_group_size, limits.sub_groups);
+        out = std::format_to(out, "compute units: {}, sub devices: {}, work item dimensions: {}, work item size: {} or ({}, {}) or ({}, {}, {}), work group size: {}, sub groups: {}, parameter size: ", limits.compute_units, limits.sub_devices, limits.work_item_dimensions, limits.work_item_size_1d, limits.work_item_size_2d[0], limits.work_item_size_2d[1], limits.work_item_size_3d[0], limits.work_item_size_3d[1], limits.work_item_size_3d[2], limits.work_group_size, limits.sub_groups);
         out = hmpc::fmt::format_maybe_human_readable_byte_size(out, human_readable, limits.parameter_size, units);
-        out = HMPC_FMTLIB::format_to(out, ", global memory size: ");
+        out = std::format_to(out, ", global memory size: ");
         out = hmpc::fmt::format_maybe_human_readable_byte_size(out, human_readable, limits.global_memory_size, units);
-        out = HMPC_FMTLIB::format_to(out, ", global memory cache size: ");
+        out = std::format_to(out, ", global memory cache size: ");
         out = hmpc::fmt::format_maybe_human_readable_byte_size(out, human_readable, limits.global_memory_cache_size, units);
-        out = HMPC_FMTLIB::format_to(out, ", global memory cache line size: ");
+        out = std::format_to(out, ", global memory cache line size: ");
         out = hmpc::fmt::format_maybe_human_readable_byte_size(out, human_readable, limits.global_memory_cache_line_size, units);
-        out = HMPC_FMTLIB::format_to(out, ", local memory size: ");
+        out = std::format_to(out, ", local memory size: ");
         out = hmpc::fmt::format_maybe_human_readable_byte_size(out, human_readable, limits.local_memory_size, units);
 
         if (not no_braces)
         {
-            out = HMPC_FMTLIB::format_to(out, "}}");
+            out = std::format_to(out, "}}");
         }
         return out;
     }
@@ -137,13 +137,13 @@ struct HMPC_FMTLIB::formatter<hmpc::comp::device_limits, Char>
 /// - 'f: flattens the formatting of the device_limits
 /// - 'n': omits outer braces
 template<typename Char>
-struct HMPC_FMTLIB::formatter<hmpc::comp::device_info, Char>
+struct std::formatter<hmpc::comp::device_info, Char>
 {
     static constexpr bool is_specialized = true;
 
     bool no_braces = false;
     bool flatten = false;
-    HMPC_FMTLIB::formatter<hmpc::comp::device_limits, Char> inner;
+    std::formatter<hmpc::comp::device_limits, Char> inner;
 
     constexpr auto parse(auto& ctx)
     {
@@ -170,7 +170,7 @@ struct HMPC_FMTLIB::formatter<hmpc::comp::device_info, Char>
         }
         if (it != ctx.end() and *it != Char{'}'})
         {
-            throw HMPC_FMTLIB::format_error("Invalid format specifier");
+            throw std::format_error("Invalid format specifier");
         }
 
         return it;
@@ -197,13 +197,13 @@ struct HMPC_FMTLIB::formatter<hmpc::comp::device_info, Char>
         auto out = ctx.out();
         if (not no_braces)
         {
-            out = HMPC_FMTLIB::format_to(out, "{{");
+            out = std::format_to(out, "{{");
         }
 
-        out = HMPC_FMTLIB::format_to(out, "type: {}, name: {}, vendor: {}, driver: {}, available: {}, address bits: {}, address align bits: {}, ", format(info.type), info.name, info.vendor, info.driver, info.available, info.address_bits, info.address_align_bits);
+        out = std::format_to(out, "type: {}, name: {}, vendor: {}, driver: {}, available: {}, address bits: {}, address align bits: {}, ", format(info.type), info.name, info.vendor, info.driver, info.available, info.address_bits, info.address_align_bits);
         if (not flatten)
         {
-            out = HMPC_FMTLIB::format_to(out, "limits: ");
+            out = std::format_to(out, "limits: ");
         }
 
         ctx.advance_to(out);
@@ -211,7 +211,7 @@ struct HMPC_FMTLIB::formatter<hmpc::comp::device_info, Char>
 
         if (not no_braces)
         {
-            out = HMPC_FMTLIB::format_to(out, "}}");
+            out = std::format_to(out, "}}");
         }
         return out;
     }

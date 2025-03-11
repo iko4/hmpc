@@ -1,9 +1,9 @@
-#include <fmt/format.h>
-
 #include "FHE/DiscreteGauss.h"
 #include "FHE/Ring_Element.h"
+
 #include <charconv>
 #include <chrono>
+#include <print>
 
 auto main(int argc, char** raw_argv) -> int
 {
@@ -116,5 +116,5 @@ auto main(int argc, char** raw_argv) -> int
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-    fmt::print("{} {:2.10f}\n", N * n, duration.count());
+    std::println("{} {:2.10f}", N * n, duration.count());
 }

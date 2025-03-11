@@ -1,17 +1,17 @@
 add_executable(fma
     fma.cpp
 )
-target_link_libraries(fma PRIVATE hmpc fmt::fmt)
+target_link_libraries(fma PRIVATE hmpc)
 
 add_executable(ntt
     ntt.cpp
 )
-target_link_libraries(ntt PRIVATE hmpc fmt::fmt)
+target_link_libraries(ntt PRIVATE hmpc)
 
 add_executable(bgv
     bgv.cpp
 )
-target_link_libraries(bgv PRIVATE hmpc fmt::fmt)
+target_link_libraries(bgv PRIVATE hmpc)
 
 set(HMPC_EXAMPLE_TARGETS fma ntt bgv)
 

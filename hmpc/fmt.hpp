@@ -2,6 +2,8 @@
 
 #include <hmpc/config.hpp>
 
+#include <format>
+
 namespace hmpc::fmt
 {
     namespace units
@@ -20,11 +22,11 @@ namespace hmpc::fmt
         switch (u)
         {
         case units::binary::none:
-            return HMPC_FMTLIB::format_to(out, "{}", value);
+            return std::format_to(out, "{}", value);
         case units::binary::bit:
-            return HMPC_FMTLIB::format_to(out, "{} b", value * T{8});
+            return std::format_to(out, "{} b", value * T{8});
         case units::binary::byte:
-            return HMPC_FMTLIB::format_to(out, "{} B", value);
+            return std::format_to(out, "{} B", value);
         }
     }
 
@@ -41,11 +43,11 @@ namespace hmpc::fmt
             switch (u)
             {
             case units::binary::none:
-                return HMPC_FMTLIB::format_to(out, "{}", value);
+                return std::format_to(out, "{}", value);
             case units::binary::bit:
-                return HMPC_FMTLIB::format_to(out, "{} b", value);
+                return std::format_to(out, "{} b", value);
             case units::binary::byte:
-                return HMPC_FMTLIB::format_to(out, "{} B", value);
+                return std::format_to(out, "{} B", value);
             }
         }
         value /= 1024;
@@ -54,11 +56,11 @@ namespace hmpc::fmt
             switch (u)
             {
             case units::binary::none:
-                return HMPC_FMTLIB::format_to(out, "{} Ki", value);
+                return std::format_to(out, "{} Ki", value);
             case units::binary::bit:
-                return HMPC_FMTLIB::format_to(out, "{} Kib", value);
+                return std::format_to(out, "{} Kib", value);
             case units::binary::byte:
-                return HMPC_FMTLIB::format_to(out, "{} KiB", value);
+                return std::format_to(out, "{} KiB", value);
             }
         }
         value /= 1024;
@@ -67,11 +69,11 @@ namespace hmpc::fmt
             switch (u)
             {
             case units::binary::none:
-                return HMPC_FMTLIB::format_to(out, "{} Mi", value);
+                return std::format_to(out, "{} Mi", value);
             case units::binary::bit:
-                return HMPC_FMTLIB::format_to(out, "{} Mib", value);
+                return std::format_to(out, "{} Mib", value);
             case units::binary::byte:
-                return HMPC_FMTLIB::format_to(out, "{} MiB", value);
+                return std::format_to(out, "{} MiB", value);
             }
         }
         value /= 1024;
@@ -80,11 +82,11 @@ namespace hmpc::fmt
             switch (u)
             {
             case units::binary::none:
-                return HMPC_FMTLIB::format_to(out, "{} Gi", value);
+                return std::format_to(out, "{} Gi", value);
             case units::binary::bit:
-                return HMPC_FMTLIB::format_to(out, "{} Gib", value);
+                return std::format_to(out, "{} Gib", value);
             case units::binary::byte:
-                return HMPC_FMTLIB::format_to(out, "{} GiB", value);
+                return std::format_to(out, "{} GiB", value);
             }
         }
         value /= 1024;
@@ -93,22 +95,22 @@ namespace hmpc::fmt
             switch (u)
             {
             case units::binary::none:
-                return HMPC_FMTLIB::format_to(out, "{} Ti", value);
+                return std::format_to(out, "{} Ti", value);
             case units::binary::bit:
-                return HMPC_FMTLIB::format_to(out, "{} Tib", value);
+                return std::format_to(out, "{} Tib", value);
             case units::binary::byte:
-                return HMPC_FMTLIB::format_to(out, "{} TiB", value);
+                return std::format_to(out, "{} TiB", value);
             }
         }
         value /= 1024;
         switch (u)
         {
         case units::binary::none:
-            return HMPC_FMTLIB::format_to(out, "{} Pi", value);
+            return std::format_to(out, "{} Pi", value);
         case units::binary::bit:
-            return HMPC_FMTLIB::format_to(out, "{} Pib", value);
+            return std::format_to(out, "{} Pib", value);
         case units::binary::byte:
-            return HMPC_FMTLIB::format_to(out, "{} PiB", value);
+            return std::format_to(out, "{} PiB", value);
         }
     }
 

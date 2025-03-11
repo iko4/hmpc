@@ -4,6 +4,7 @@
 #include <hmpc/constant.hpp>
 
 #include <bit>
+#include <format>
 #include <limits>
 #include <utility>
 
@@ -388,7 +389,7 @@ namespace hmpc
 #undef HMPC_UNARY_OPERATORS
 
 template<typename Underlying, typename Char>
-struct HMPC_FMTLIB::formatter<hmpc::core::uint<Underlying>, Char>
+struct std::formatter<hmpc::core::uint<Underlying>, Char>
 {
     using type = hmpc::core::uint<Underlying>;
 
@@ -407,12 +408,12 @@ struct HMPC_FMTLIB::formatter<hmpc::core::uint<Underlying>, Char>
     {
         static_assert(type::bit_size >= 4);
         static_assert(type::bit_size % 4 == 0);
-        return HMPC_FMTLIB::format_to(ctx.out(), "0x{:0{}x}", value.data, type::bit_size / 4);
+        return std::format_to(ctx.out(), "0x{:0{}x}", value.data, type::bit_size / 4);
     }
 };
 
 template<typename Char>
-struct HMPC_FMTLIB::formatter<hmpc::core::uint<bool>, Char>
+struct std::formatter<hmpc::core::uint<bool>, Char>
 {
     using type = hmpc::core::uint<bool>;
 
@@ -429,6 +430,6 @@ struct HMPC_FMTLIB::formatter<hmpc::core::uint<bool>, Char>
 
     auto format(type value, auto& ctx) const
     {
-        return HMPC_FMTLIB::format_to(ctx.out(), "0b{:}", static_cast<unsigned int>(value.data));
+        return std::format_to(ctx.out(), "0b{:}", static_cast<unsigned int>(value.data));
     }
 };

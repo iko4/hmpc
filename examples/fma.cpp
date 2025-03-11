@@ -3,11 +3,11 @@
 #include <hmpc/ints/literals.hpp>
 #include <hmpc/ints/mod.hpp>
 
-#include <fmt/format.h>
 #include <sycl/sycl.hpp>
 
 #include <charconv>
 #include <chrono>
+#include <print>
 
 auto main(int argc, char** raw_argv) -> int
 {
@@ -68,5 +68,5 @@ auto main(int argc, char** raw_argv) -> int
     queue.wait();
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-    fmt::print("{} {:2.10f}\n", N, duration.count());
+    std::println("{} {:2.10f}", N, duration.count());
 }

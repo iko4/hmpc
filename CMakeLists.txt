@@ -146,14 +146,10 @@ endif()
 add_subdirectory(hmpc-rs)
 
 if (HMPC_BUILD_TESTING)
-    find_package(FMT 10 REQUIRED)
-
     add_subdirectory(tests)
 endif()
 
 if (HMPC_BUILD_EXAMPLES)
-    find_package(FMT 10 REQUIRED)
-
     add_subdirectory(examples)
 endif()
 

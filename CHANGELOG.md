@@ -9,6 +9,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 ### Changed
 
 - Update container image to Ubuntu 24.04.
+- Format via standard library instead of fmt library.
 
 
 ## Version 0.5.2 - 2025-03-04

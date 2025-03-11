@@ -16,6 +16,8 @@
 #include <hmpc/ints/num/shift_right.hpp>
 #include <hmpc/ints/num/subtract.hpp>
 
+#include <format>
+
 #define HMPC_TEMPLATE_COMPARISON_OPERATOR(T, OP, FUNCTION) \
     template<hmpc::size OtherBits, hmpc::signedness OtherSignedness, typename OtherNormalization> \
     friend constexpr hmpc::bit operator OP(T<Bits, Signedness, Limb, Normalization> const& left, T<OtherBits, OtherSignedness, Limb, OtherNormalization> const& right) HMPC_NOEXCEPT \
@@ -149,11 +151,11 @@ namespace hmpc::ints
 #undef HMPC_TEMPLATE_OPERATORS
 
 template<hmpc::size Bits, hmpc::signedness Signedness, typename Limb, typename Normalization, typename Char>
-struct HMPC_FMTLIB::formatter<hmpc::ints::bigint<Bits, Signedness, Limb, Normalization>, Char>
+struct std::formatter<hmpc::ints::bigint<Bits, Signedness, Limb, Normalization>, Char>
 {
     using type = hmpc::ints::bigint<Bits, Signedness, Limb, Normalization>;
     using span_type = decltype(std::declval<type const&>().span(hmpc::access::read));
-    HMPC_FMTLIB::formatter<span_type, Char> underlying_formatter;
+    std::formatter<span_type, Char> underlying_formatter;
 
     static constexpr bool is_specialized = true;
 

@@ -215,7 +215,7 @@ namespace hmpc
 /// format("{nhU}", stats); // "sent: 42000 KiB, received: 10 B, rounds: 1"
 /// ```
 template<typename Char>
-struct HMPC_FMTLIB::formatter<hmpc::net::statistics, Char>
+struct std::formatter<hmpc::net::statistics, Char>
 {
     static constexpr bool is_specialized = true;
 
@@ -255,7 +255,7 @@ struct HMPC_FMTLIB::formatter<hmpc::net::statistics, Char>
         }
         if (it != ctx.end() and *it != Char{'}'})
         {
-            throw HMPC_FMTLIB::format_error("Invalid format specifier");
+            throw std::format_error("Invalid format specifier");
         }
 
         return it;
@@ -268,19 +268,19 @@ struct HMPC_FMTLIB::formatter<hmpc::net::statistics, Char>
         auto out = ctx.out();
         if (not no_braces)
         {
-            out = HMPC_FMTLIB::format_to(out, "{{");
+            out = std::format_to(out, "{{");
         }
 
-        out = HMPC_FMTLIB::format_to(out, "sent: ");
+        out = std::format_to(out, "sent: ");
         out = hmpc::fmt::format_maybe_human_readable_byte_size(out, human_readable, value.sent, units);
-        out = HMPC_FMTLIB::format_to(out, ", received: ");
+        out = std::format_to(out, ", received: ");
         out = hmpc::fmt::format_maybe_human_readable_byte_size(out, human_readable, value.received, units);
 
-        out = HMPC_FMTLIB::format_to(out, ", rounds: {}", value.rounds);
+        out = std::format_to(out, ", rounds: {}", value.rounds);
 
         if (not no_braces)
         {
-            out = HMPC_FMTLIB::format_to(out, "}}");
+            out = std::format_to(out, "}}");
         }
         return out;
     }

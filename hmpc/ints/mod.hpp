@@ -6,6 +6,8 @@
 #include <hmpc/ints/num/select.hpp>
 #include <hmpc/ints/numeric.hpp>
 
+#include <format>
+
 #define HMPC_COMPARISON_OPERATOR(T, OP, FUNCTION) \
     friend constexpr hmpc::bit operator OP(T const& left, T const& right) HMPC_NOEXCEPT \
     { \
@@ -445,11 +447,11 @@ namespace hmpc::ints
 #undef HMPC_ASSIGNMENT_OPERATORS
 
 template<auto Modulus, typename Char>
-struct HMPC_FMTLIB::formatter<hmpc::ints::mod<Modulus>, Char>
+struct std::formatter<hmpc::ints::mod<Modulus>, Char>
 {
     using type = hmpc::ints::mod<Modulus>;
     using big_integer_type = type::unsigned_type;
-    HMPC_FMTLIB::formatter<big_integer_type, Char> underlying_formatter;
+    std::formatter<big_integer_type, Char> underlying_formatter;
 
     static constexpr bool is_specialized = true;
 

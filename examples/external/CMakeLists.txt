@@ -87,23 +87,23 @@ add_executable(mpspdz-fma
 )
 target_compile_features(mpspdz-fma PRIVATE cxx_std_23)
 target_compile_options(mpspdz-fma PRIVATE ${OpenMP_CXX_FLAGS})
-target_link_libraries(mpspdz-fma PRIVATE MP-SPDZ fmt::fmt OpenMP::OpenMP_CXX)
+target_link_libraries(mpspdz-fma PRIVATE MP-SPDZ OpenMP::OpenMP_CXX)
 target_link_options(mpspdz-fma PRIVATE ${OpenMP_CXX_FLAGS})
 
 add_executable(mpspdz-ntt
     mpspdz-ntt.cpp
 )
-target_compile_features(mpspdz-ntt PRIVATE cxx_std_17)
+target_compile_features(mpspdz-ntt PRIVATE cxx_std_23)
 target_compile_options(mpspdz-ntt PRIVATE ${OpenMP_CXX_FLAGS})
-target_link_libraries(mpspdz-ntt PRIVATE MP-SPDZ fmt::fmt OpenMP::OpenMP_CXX)
+target_link_libraries(mpspdz-ntt PRIVATE MP-SPDZ OpenMP::OpenMP_CXX)
 target_link_options(mpspdz-ntt PRIVATE ${OpenMP_CXX_FLAGS})
 
 add_executable(mpspdz-bgv
     mpspdz-bgv.cpp
 )
-target_compile_features(mpspdz-bgv PRIVATE cxx_std_17)
+target_compile_features(mpspdz-bgv PRIVATE cxx_std_23)
 target_compile_options(mpspdz-bgv PRIVATE ${OpenMP_CXX_FLAGS})
-target_link_libraries(mpspdz-bgv PRIVATE MP-SPDZ fmt::fmt OpenMP::OpenMP_CXX)
+target_link_libraries(mpspdz-bgv PRIVATE MP-SPDZ OpenMP::OpenMP_CXX)
 target_link_options(mpspdz-bgv PRIVATE ${OpenMP_CXX_FLAGS})
 
 list(APPEND HMPC_EXAMPLE_TARGETS mpspdz-fma mpspdz-ntt mpspdz-bgv)

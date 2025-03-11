@@ -8,13 +8,13 @@
 template<typename T>
     requires requires(T&& value)
     {
-        HMPC_FMTLIB::format("{}", value);
-        HMPC_FMTLIB::formatter<T, char>::is_specialized;
+        std::format("{}", value);
+        std::formatter<T, char>::is_specialized;
     }
 struct Catch::StringMaker<T>
 {
     static std::string convert(T const& value)
     {
-        return HMPC_FMTLIB::format("{}", value);
+        return std::format("{}", value);
     }
 };

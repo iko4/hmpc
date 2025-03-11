@@ -22,7 +22,7 @@ add_executable(host-tests
     typing/structure.cpp
 )
 target_include_directories(host-tests PRIVATE .)
-target_link_libraries(host-tests PRIVATE hmpc Catch2::Catch2WithMain fmt::fmt)
+target_link_libraries(host-tests PRIVATE hmpc Catch2::Catch2WithMain)
 target_compile_definitions(host-tests PRIVATE HMPC_TESTING=1)
 catch_discover_tests(host-tests)
 
@@ -39,7 +39,7 @@ add_executable(device-tests
     expr/matrix_vector_product.cpp
 )
 target_include_directories(device-tests PRIVATE .)
-target_link_libraries(device-tests PRIVATE hmpc Catch2::Catch2WithMain fmt::fmt)
+target_link_libraries(device-tests PRIVATE hmpc Catch2::Catch2WithMain)
 target_compile_definitions(device-tests PRIVATE HMPC_TESTING=1 HMPC_ASSERT_LEVEL=1)
 catch_discover_tests(device-tests)
 
@@ -48,7 +48,7 @@ add_executable(ffi-tests
     net/queue.cpp
 )
 target_include_directories(ffi-tests PRIVATE .)
-target_link_libraries(ffi-tests PRIVATE hmpc hmpc-rs Catch2::Catch2WithMain fmt::fmt)
+target_link_libraries(ffi-tests PRIVATE hmpc hmpc-rs Catch2::Catch2WithMain)
 target_compile_definitions(ffi-tests PRIVATE HMPC_TESTING=1)
 catch_discover_tests(ffi-tests
     WORKING_DIRECTORY ${HMPC_RS_WORKING_DIR}
@@ -69,7 +69,7 @@ if (HMPC_TEST_COVERAGE)
         $<TARGET_PROPERTY:ffi-tests,SOURCES>
     )
     target_include_directories(tests-with-coverage PRIVATE .)
-    target_link_libraries(tests-with-coverage PRIVATE hmpc hmpc-rs Catch2::Catch2WithMain fmt::fmt)
+    target_link_libraries(tests-with-coverage PRIVATE hmpc hmpc-rs Catch2::Catch2WithMain)
     target_compile_options(tests-with-coverage PRIVATE -Wno-error=option-ignored -fprofile-instr-generate -fcoverage-mapping)
     target_compile_definitions(tests-with-coverage PRIVATE HMPC_TESTING=1 HMPC_ASSERT_LEVEL=1)
     target_link_options(tests-with-coverage PRIVATE -fprofile-instr-generate)
