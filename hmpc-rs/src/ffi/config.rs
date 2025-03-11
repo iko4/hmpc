@@ -41,7 +41,7 @@ macro_rules! path_from_string
 ///
 /// # Safety
 /// The `config` pointer has to be a valid null-terminated C-string or `nullptr`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_read(config: *const c_char) -> Nullable<Config>
 {
     debug!("Read config");
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_read(config: *const c_char) -> Null
 ///
 /// # Safety
 /// The `config` pointer has to be a valid null-terminated C-string or `nullptr`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_read_env(config: *const c_char) -> Nullable<Config>
 {
     debug!("Read config with precedence from environment");
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_read_env(config: *const c_char) -> 
 ///
 /// # Safety
 /// The `config` pointer has to be valid. (The function only checks for `nullptr`.)
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_session_from_env(config: Nullable<Config>) -> bool
 {
     debug!("Trying to read session ID from environment variable");
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_session_from_env(config: Nullable<C
 /// This function frees the passed pointer with `Box::from_raw`.
 /// As a caller, ensure that the pointer actually comes from a `Box` and is not freed multiple times.
 /// This function only checks for `nullptr` but cannot do any other checks.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_free(config: Nullable<Config>)
 {
     debug!("Freeing config");

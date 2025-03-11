@@ -13,8 +13,8 @@ use crate::net::ptr::Nullable;
 /// If `config` is not null, this function frees the passed pointer with `Box::from_raw`.
 /// As a caller, ensure that the pointer actually comes from a `Box` and is not freed multiple times.
 /// This function only checks for `nullptr` but cannot do any other checks.
-#[no_mangle]
 #[must_use]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_init(id: PartyID, config: Nullable<Config>) -> Nullable<Queue>
 {
     set_logger();
@@ -56,7 +56,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_init(id: PartyID, config: Nullable<C
 /// This function frees the passed pointer with `Box::from_raw`.
 /// As a caller, ensure that the pointer actually comes from a `Box` and is not freed multiple times.
 /// This function only checks for `nullptr` but cannot do any other checks.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_free(queue: Nullable<Queue>)
 {
     debug!("Freeing queue");
@@ -71,7 +71,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_free(queue: Nullable<Queue>)
 ///
 /// The `data` pointer has to be valid. (The function only checks for `nullptr`.)
 /// The `data` pointer has to point to a region of (at least) `message.size` valid bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_broadcast(queue: Nullable<Queue>, message: Broadcast, communicator: Communicator, data: NullableData) -> SendReceiveErrc
 {
     info!("Broadcast");
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_broadcast(queue: Nullable<Queue>, me
 /// The `data` span has to be valid. (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_broadcast(queue: Nullable<Queue>, messages: Span<Broadcast>, communicator: Communicator, data: Span<NullableData>) -> SendReceiveErrc
 {
     info!("Multi broadcast");
@@ -144,7 +144,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_broadcast(queue: Nullable<Queu
 /// - `data` has length 1.
 /// - The `data[0]` pointer has to be valid. (The function only checks for `nullptr`.)
 /// - The `data[0]` pointer has to point to a region of (at least) `message.size` valid bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_gather(queue: Nullable<Queue>, message: Gather, communicator: Communicator, data: Span<NullableData>) -> SendReceiveErrc
 {
     info!("Gather");
@@ -196,7 +196,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_gather(queue: Nullable<Queue>, messa
 /// - `data[i]` has length 1.
 /// - The `data[i][0]` pointer has to be valid. (The function only checks for `nullptr`.)
 /// - The `data[i][0]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_gather(queue: Nullable<Queue>, messages: Span<Gather>, communicator: Communicator, data: Span2d<NullableData>) -> SendReceiveErrc
 {
     info!("Multi gather");
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_gather(queue: Nullable<Queue>,
 /// The `data` span has to be valid. (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_all_gather(queue: Nullable<Queue>, message: AllGather, communicator: Communicator, data: Span<NullableData>) -> SendReceiveErrc
 {
     info!("All-gather");
@@ -278,7 +278,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_all_gather(queue: Nullable<Queue>, m
 ///
 /// The `data` span has to be valid. (The function only checks for `nullptr`.)
 // TODO: clarify validity for data
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_gather(queue: Nullable<Queue>, messages: Span<AllGather>, communicator: Communicator, data: Span2d<NullableData>) -> SendReceiveErrc
 {
     info!("Multi all-gather");
@@ -312,7 +312,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_gather(queue: Nullable<Que
 /// The `data` span has to be valid. (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_all_gather(queue: Nullable<Queue>, message: AllGather, senders: Communicator, receivers: Communicator, data: Span<NullableData>) -> SendReceiveErrc
 {
     info!("Extended all-gather");
@@ -353,7 +353,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_all_gather(queue: Nullable<
 ///
 /// The `data` span has to be valid. (The function only checks for `nullptr`.)
 // TODO: clarify validity for data
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_multi_all_gather(queue: Nullable<Queue>, messages: Span<AllGather>, senders: Communicator, receivers: Communicator, data: Span2d<NullableData>) -> SendReceiveErrc
 {
     info!("Extended multi all-gather");
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_multi_all_gather(queue: Nul
 ///
 /// The `receive_data` span has to be valid. (The function only checks for `nullptr`.)
 // TODO: clarify validity for send_data and receive_data
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_all_to_all(queue: Nullable<Queue>, message: AllToAll, communicator: Communicator, send_data: Span<NullableData>, receive_data: Span<NullableData>) -> SendReceiveErrc
 {
     info!("All-to-all");
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_all_to_all(queue: Nullable<Queue>, m
 ///
 /// The `receive_data` span has to be valid. (The function only checks for `nullptr`.)
 // TODO: clarify validity for send_data and receive_data
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_to_all(queue: Nullable<Queue>, messages: Span<AllToAll>, communicator: Communicator, send_data: Span2d<NullableData>, receive_data: Span2d<NullableData>) -> SendReceiveErrc
 {
     info!("Multi all-to-all");
@@ -462,7 +462,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_to_all(queue: Nullable<Que
 /// Consistency checks for collective communication operations are disabled.
 /// Enable the "collective-consistency" feature to add consistency checks.
 #[cfg(not(feature = "collective-consistency"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(_queue: Nullable<Queue>) -> SendReceiveErrc
 {
     warn!("The \"collective-consistency\" feature is not enabled");
@@ -473,7 +473,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(_queue: Nullable<Queue>) -> Sen
 /// # Safety
 /// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
 #[cfg(feature = "collective-consistency")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(queue: Nullable<Queue>) -> SendReceiveErrc
 {
     info!("Wait");
@@ -496,7 +496,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(queue: Nullable<Queue>) -> Send
 /// Retrieving network statistics is disabled.
 /// Enable the "statistics" feature to get estimates on the number of bytes sent and received.
 #[cfg(not(feature = "statistics"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn hmpc_ffi_net_queue_network_statistics(_queue: Nullable<Queue>) -> NetworkStatistics
 {
     warn!("The \"statistics\" feature is not enabled");
@@ -510,7 +510,7 @@ pub extern "C" fn hmpc_ffi_net_queue_network_statistics(_queue: Nullable<Queue>)
 /// # Safety
 /// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
 #[cfg(feature = "statistics")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_network_statistics(queue: Nullable<Queue>) -> NetworkStatistics
 {
     let Some(mut queue) = queue

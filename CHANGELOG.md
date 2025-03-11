@@ -8,7 +8,8 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ### Changed
 
-- Update container image to Ubuntu 24.04.
+- Upgrade container image to Ubuntu 24.04.
+- Upgrade to Rust edition 2024.
 - Format via standard library instead of fmt library.
 
 

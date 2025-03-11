@@ -290,7 +290,7 @@ impl QueueState
             {
                 assert_eq!(communicator.len(), data.len());
 
-                for (&party, &data) in communicator.iter().zip(data).filter(|(&party, _)| party != id)
+                for (&party, &data) in communicator.iter().zip(data).filter(|&(&party, _)| party != id)
                 {
                     let message = message.to_message(party, id, message_id);
                     self.receive_on(&mut tasks, handle, message, data);
