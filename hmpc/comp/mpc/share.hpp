@@ -7,10 +7,10 @@
 
 namespace hmpc::comp::mpc
 {
-    template<typename T, hmpc::net::party_id Id, hmpc::net::party_id... Parties>
+    template<typename T, hmpc::party_id Id, hmpc::party_id... Parties>
     struct share;
 
-    template<typename T, hmpc::net::party_id... Parties>
+    template<typename T, hmpc::party_id... Parties>
     struct shares
     {
         using is_structure = void;
@@ -49,19 +49,19 @@ namespace hmpc::comp::mpc
         }
     };
 
-    template<hmpc::size I, typename T, hmpc::net::party_id... Parties>
+    template<hmpc::size I, typename T, hmpc::party_id... Parties>
     constexpr auto get(shares<T, Parties...>& s)
     {
         return s.get(hmpc::size_constant_of<I>);
     }
 
-    template<hmpc::size I, typename T, hmpc::net::party_id... Parties>
+    template<hmpc::size I, typename T, hmpc::party_id... Parties>
     constexpr auto get(shares<T, Parties...> const& s)
     {
         return s.get(hmpc::size_constant_of<I>);
     }
 
-    template<typename T, hmpc::net::party_id Id, hmpc::net::party_id... Parties>
+    template<typename T, hmpc::party_id Id, hmpc::party_id... Parties>
     struct share
     {
         T value;
@@ -104,12 +104,12 @@ namespace hmpc::comp::mpc
     };
 }
 
-template<typename T, hmpc::net::party_id... Parties>
+template<typename T, hmpc::party_id... Parties>
 struct std::tuple_size<hmpc::comp::mpc::shares<T, Parties...>> : public std::integral_constant<std::size_t, sizeof...(Parties)>
 {
 };
 
-template<typename T, hmpc::net::party_id... Parties, std::size_t I>
+template<typename T, hmpc::party_id... Parties, std::size_t I>
 struct std::tuple_element<I, hmpc::comp::mpc::shares<T, Parties...>>
 {
     using type = hmpc::comp::mpc::share<T, hmpc::net::communicator_for<Parties...>.get(hmpc::size_constant_of<I>), Parties...>;

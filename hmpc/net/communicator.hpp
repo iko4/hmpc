@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hmpc/core/to_underlying.hpp>
 #include <hmpc/net/ffi.hpp>
 
 #include <algorithm>
@@ -25,15 +26,15 @@ namespace hmpc::net
     template<party_id... Parties>
     communicator(hmpc::party_constant<Parties>...) -> communicator<Parties...>;
 
-    template<party_id... Parties>
-    constexpr communicator<Parties...> communicator_for = {};
+    template<auto... Parties>
+    constexpr communicator<party_id{Parties}...> communicator_for = {};
 
     namespace detail
     {
         template<party_id... Parties>
         constexpr auto to_ffi(communicator<Parties...>) noexcept
         {
-            static constexpr std::array<party_id, sizeof...(Parties)> parties = { Parties... };
+            static constexpr std::array<hmpc::ffi::PartyID, sizeof...(Parties)> parties = { hmpc::core::to_underlying(Parties)... };
             static_assert(std::ranges::is_sorted(parties), "Communicator has to be sorted");
             static_assert(std::ranges::adjacent_find(parties) == std::ranges::end(parties), "Communicator has to be free of duplicates");
             return hmpc::ffi::Communicator{ .data = parties.data(), .len = parties.size() };

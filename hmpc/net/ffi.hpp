@@ -99,7 +99,6 @@ namespace hmpc::ffi
 
 namespace hmpc::net
 {
-    using party_id = hmpc::ffi::PartyID;
     using message_datatype = hmpc::ffi::MessageDatatype;
     using message_size = hmpc::ffi::MessageSize;
     using data_ptr = hmpc::ffi::NullableDataPtr;
@@ -187,11 +186,15 @@ namespace hmpc::net
 
 namespace hmpc
 {
-    template<hmpc::net::party_id Id>
-    using party_constant = hmpc::constant<hmpc::net::party_id, Id>;
+    enum class party_id : hmpc::ffi::PartyID
+    {
+    };
 
-    template<hmpc::net::party_id Id>
-    constexpr party_constant<Id> party_constant_of = {};
+    template<hmpc::party_id Id>
+    using party_constant = hmpc::constant<hmpc::party_id, Id>;
+
+    template<auto Id>
+    constexpr party_constant<hmpc::party_id{Id}> party_constant_of = {};
 }
 
 /// Format hmpc::net::statistics

@@ -8,14 +8,14 @@
 
 namespace hmpc::expr::mpc
 {
-    template<typename T, hmpc::net::party_id Id, hmpc::net::party_id... Parties>
+    template<typename T, hmpc::party_id Id, hmpc::party_id... Parties>
     struct share_expression;
 
     template<typename Communicator, typename... Shares>
     struct shares_expression;
 
     // cannot have multiple parameter packs in class definition, so we wrap the parties in a communicator
-    template<typename... Shares, hmpc::net::party_id... Parties>
+    template<typename... Shares, hmpc::party_id... Parties>
     struct shares_expression<hmpc::net::communicator<Parties...>, Shares...>
     {
         using is_tuple = void;
@@ -47,7 +47,7 @@ namespace hmpc::expr::mpc
         }
     };
 
-    template<typename T, hmpc::net::party_id Id, hmpc::net::party_id... Parties>
+    template<typename T, hmpc::party_id Id, hmpc::party_id... Parties>
     struct share_expression
     {
         using value_type = T;
@@ -125,29 +125,29 @@ namespace hmpc::expr::mpc
             return share_expression<decltype(left * right.value), Id, Parties...>{left * right.value};
         }
 
-        template<typename Other, hmpc::net::party_id OtherId, hmpc::net::party_id... OtherParties>
+        template<typename Other, hmpc::party_id OtherId, hmpc::party_id... OtherParties>
         friend constexpr auto operator*(share_expression<Other, OtherId, OtherParties...> left, share_expression right) = delete;
     };
 
-    template<typename T, hmpc::net::party_id Id, hmpc::net::party_id... Parties>
+    template<typename T, hmpc::party_id Id, hmpc::party_id... Parties>
     constexpr auto share(T value, hmpc::party_constant<Id>, hmpc::net::communicator<Parties...>)
     {
         return share_expression<T, Id, Parties...>{value};
     }
 
-    template<auto Tag = []{}, typename T, hmpc::size... Dimensions, hmpc::net::party_id Id, hmpc::net::party_id... Parties>
+    template<auto Tag = []{}, typename T, hmpc::size... Dimensions, hmpc::party_id Id, hmpc::party_id... Parties>
     constexpr auto share(hmpc::comp::mpc::share<hmpc::comp::tensor<T, Dimensions...>, Id, Parties...>& s)
     {
         return share(hmpc::expr::tensor<Tag, T, Dimensions...>(s.value), s.id, s.communicator);
     }
 
-    template<typename... Shares, hmpc::net::party_id... Parties>
+    template<typename... Shares, hmpc::party_id... Parties>
     constexpr auto shares(share_expression<Shares, Parties, Parties...>... shares)
     {
         return shares_expression<hmpc::net::communicator<Parties...>, Shares...>::from_parts(shares.value...);
     }
 
-    template<auto Tag = []{}, typename T, hmpc::size... Dimensions, hmpc::net::party_id... Parties>
+    template<auto Tag = []{}, typename T, hmpc::size... Dimensions, hmpc::party_id... Parties>
     constexpr auto shares(hmpc::comp::mpc::shares<hmpc::comp::tensor<T, Dimensions...>, Parties...>& shares)
     {
         constexpr hmpc::size size = sizeof...(Parties);

@@ -43,7 +43,7 @@ namespace hmpc::net
         }
 
         explicit queue(hmpc::net::config&& config)
-            : handle(hmpc::ffi::hmpc_ffi_net_queue_init(id, std::move(config).release()))
+            : handle(hmpc::ffi::hmpc_ffi_net_queue_init(hmpc::core::to_underlying(id), std::move(config).release()))
         {
         }
 
@@ -72,7 +72,7 @@ namespace hmpc::net
             auto metadata = hmpc::ffi::BroadcastMetadata
             {
                 .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                .sender = Sender,
+                .sender = hmpc::core::to_underlying(Sender),
                 .size = byte_size,
             };
 
@@ -105,7 +105,7 @@ namespace hmpc::net
             auto metadata = hmpc::ffi::BroadcastMetadata
             {
                 .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                .sender = Sender,
+                .sender = hmpc::core::to_underlying(Sender),
                 .size = byte_size,
             };
 
@@ -140,7 +140,7 @@ namespace hmpc::net
                     return hmpc::ffi::BroadcastMetadata
                     {
                         .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                        .sender = Senders,
+                        .sender = hmpc::core::to_underlying(Senders),
                         .size = byte_size,
                     };
                 }()...
@@ -191,7 +191,7 @@ namespace hmpc::net
                         return hmpc::ffi::BroadcastMetadata
                         {
                             .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                            .sender = senders.get(i),
+                            .sender = hmpc::core::to_underlying(senders.get(i)),
                             .size = byte_size,
                         };
                     }()...
@@ -225,7 +225,7 @@ namespace hmpc::net
             auto metadata = hmpc::ffi::GatherMetadata
             {
                 .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                .receiver = Receiver,
+                .receiver = hmpc::core::to_underlying(Receiver),
                 .size = byte_size,
             };
 
@@ -261,7 +261,7 @@ namespace hmpc::net
             auto metadata = hmpc::ffi::GatherMetadata
             {
                 .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                .receiver = Receiver,
+                .receiver = hmpc::core::to_underlying(Receiver),
                 .size = byte_size,
             };
 
@@ -294,7 +294,7 @@ namespace hmpc::net
             auto metadata = hmpc::ffi::GatherMetadata
             {
                 .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                .receiver = Receiver,
+                .receiver = hmpc::core::to_underlying(Receiver),
                 .size = byte_size,
             };
 
@@ -344,7 +344,7 @@ namespace hmpc::net
                     return hmpc::ffi::GatherMetadata
                     {
                         .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                        .receiver = extended_receivers.get(j),
+                        .receiver = hmpc::core::to_underlying(extended_receivers.get(j)),
                         .size = byte_size,
                     };
                 }, get<0>(get<i>(result))...);
@@ -394,7 +394,7 @@ namespace hmpc::net
                 return hmpc::ffi::GatherMetadata
                 {
                     .datatype = hmpc::net::traits::message_datatype_of_v<limb_type>,
-                    .receiver = extended_receivers.get(i),
+                    .receiver = hmpc::core::to_underlying(extended_receivers.get(i)),
                     .size = byte_size,
                 };
             }, tensors...);

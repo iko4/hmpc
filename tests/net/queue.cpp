@@ -11,7 +11,7 @@ constexpr auto config = "tests/mpc.yaml";
 
 TEST_CASE("Network: Broadcast", "[net][queue][ffi][broadcast]")
 {
-    static constexpr hmpc::net::communicator<0, 1, 2, 3> communicator = {};
+    static constexpr auto communicator = hmpc::net::communicator_for<0, 1, 2, 3>;
 
     using uint = hmpc::ints::ubigint<96, hmpc::core::uint32>;
     static_assert(uint::limb_size == 3);
@@ -19,11 +19,11 @@ TEST_CASE("Network: Broadcast", "[net][queue][ffi][broadcast]")
     static_assert(communicator.size == 4);
 
     auto queues = std::make_tuple(
-        hmpc::net::queue<0>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<1>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<2>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<3>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<4>(hmpc::net::config::read_env(config)) // not part of the communicator
+        hmpc::net::queue(hmpc::party_constant_of<0>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<1>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<2>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<3>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<4>, hmpc::net::config::read_env(config)) // not part of the communicator
     );
 
     auto shape = hmpc::shape{2};
@@ -85,7 +85,7 @@ TEST_CASE("Network: Broadcast", "[net][queue][ffi][broadcast]")
 
 TEST_CASE("Network: Gather", "[net][queue][ffi][gather]")
 {
-    static constexpr hmpc::net::communicator<10, 11, 12, 13> communicator = {};
+    static constexpr auto communicator = hmpc::net::communicator_for<10, 11, 12, 13>;
 
     using uint = hmpc::ints::ubigint<96, hmpc::core::uint32>;
     static_assert(uint::limb_size == 3);
@@ -93,10 +93,10 @@ TEST_CASE("Network: Gather", "[net][queue][ffi][gather]")
     static_assert(communicator.size == 4);
 
     auto queues = std::make_tuple(
-        hmpc::net::queue<10>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<11>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<12>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<13>(hmpc::net::config::read_env(config))
+        hmpc::net::queue(hmpc::party_constant_of<10>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<11>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<12>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<13>, hmpc::net::config::read_env(config))
     );
 
     auto data = std::array
@@ -156,7 +156,7 @@ TEST_CASE("Network: Gather", "[net][queue][ffi][gather]")
 
 TEST_CASE("Network: All-gather", "[net][queue][ffi][all_gather]")
 {
-    static constexpr hmpc::net::communicator<20, 21, 22, 23> communicator = {};
+    static constexpr auto communicator = hmpc::net::communicator_for<20, 21, 22, 23>;
 
     using uint = hmpc::ints::ubigint<96, hmpc::core::uint32>;
     static_assert(uint::limb_size == 3);
@@ -164,10 +164,10 @@ TEST_CASE("Network: All-gather", "[net][queue][ffi][all_gather]")
     static_assert(communicator.size == 4);
 
     auto queues = std::make_tuple(
-        hmpc::net::queue<20>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<21>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<22>(hmpc::net::config::read_env(config)),
-        hmpc::net::queue<23>(hmpc::net::config::read_env(config))
+        hmpc::net::queue(hmpc::party_constant_of<20>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<21>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<22>, hmpc::net::config::read_env(config)),
+        hmpc::net::queue(hmpc::party_constant_of<23>, hmpc::net::config::read_env(config))
     );
 
     auto data = std::array

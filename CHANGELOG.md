@@ -11,6 +11,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 - Upgrade container image to Ubuntu 24.04.
 - Upgrade to Rust edition 2024.
 - Format via standard library instead of fmt library.
+- Make party ID a new type (outside of net namespace).
 
 ### Fixed
 
