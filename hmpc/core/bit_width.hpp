@@ -15,7 +15,7 @@ namespace hmpc::core
         }
         else
         {
-            return hmpc::size{std::bit_width(value.data)};
+            return static_cast<hmpc::size>(std::bit_width(value.data));
         }
     }
 }
