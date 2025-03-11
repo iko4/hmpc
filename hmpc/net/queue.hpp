@@ -714,8 +714,6 @@ namespace hmpc::net
         {
             static_assert(((std::tuple_size_v<std::remove_cvref_t<Tensors>> == communicator.size) and ...));
 
-            constexpr hmpc::size count = sizeof...(Tensors);
-
             auto result = make_multi_result_storage_with(
                 id,
                 communicator,
