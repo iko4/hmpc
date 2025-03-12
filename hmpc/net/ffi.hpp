@@ -27,6 +27,10 @@ namespace hmpc::ffi
             throw std::invalid_argument("communicator");
         case SendReceiveErrc::invalid_metadata:
             throw std::invalid_argument("metadata");
+        case SendReceiveErrc::invalid_server_address:
+            throw std::system_error(std::make_error_code(std::errc::bad_address), "server address");
+        case SendReceiveErrc::invalid_server_name:
+            throw std::system_error(std::make_error_code(std::errc::bad_address), "server name");
         case SendReceiveErrc::version_mismatch:
             throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "version mismatch");
         case SendReceiveErrc::feature_mismatch:
@@ -51,6 +55,12 @@ namespace hmpc::ffi
             throw std::domain_error("connection identifiers");
         case SendReceiveErrc::application_closed:
             throw std::system_error(std::make_error_code(std::errc::connection_reset), "application closed");
+        case SendReceiveErrc::endpoint_not_configured:
+            throw std::runtime_error("endpoint not configured");
+        case SendReceiveErrc::endpoint_stopped:
+            throw std::system_error(std::make_error_code(std::errc::connection_reset), "endpoint stopped");
+        case SendReceiveErrc::endpoint_version_unsupported:
+            throw std::system_error(std::make_error_code(std::errc::wrong_protocol_type), "endpoint version unsupported");
         case SendReceiveErrc::stream_finished_early:
             throw std::system_error(std::make_error_code(std::errc::message_size), "stream finished early");
         case SendReceiveErrc::stream_reset:

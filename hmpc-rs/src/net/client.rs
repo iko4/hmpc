@@ -38,7 +38,7 @@ async fn make_client_config(config: &Config) -> quinn::ClientConfig
     client_config
 }
 
-async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoint: &quinn::Endpoint, outgoing: &mut std::collections::HashMap<PartyID, quinn::Connection>) -> quinn::Connection
+async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoint: &quinn::Endpoint, outgoing: &mut std::collections::HashMap<PartyID, quinn::Connection>) -> Result<quinn::Connection, ClientError>
 {
     match outgoing.entry(receiver)
     {
@@ -46,21 +46,21 @@ async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoi
         {
             let connection = entry.get();
             info!("[Party {}] Outgoing connection: to {} reused", id, connection.remote_address());
-            connection.clone()
+            Ok(connection.clone())
         },
         Entry::Vacant(entry) =>
         {
             info!("[Party {}] Outgoing connection: trying to connect new client", id);
-            let connection = connect_client(endpoint, receiver, config).await;
+            let connection = connect_client(endpoint, receiver, config).await?;
             info!("[Party {}] Outgoing connection: to {} established", id, connection.remote_address());
-            entry.insert(connection).clone()
+            Ok(entry.insert(connection).clone())
         },
     }
 }
 
-async fn connect_client(client: &quinn::Endpoint, id: PartyID, config: &Config) -> quinn::Connection
+async fn connect_client(client: &quinn::Endpoint, id: PartyID, config: &Config) -> Result<quinn::Connection, ClientError>
 {
-    client.connect(make_addr(id, config), config.name(id)).unwrap().await.unwrap()
+    client.connect(make_addr(id, config), config.name(id))?.await.map_err(Into::into)
 }
 
 async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: SessionID, #[cfg(feature = "signing")] signing_key: Arc<PrivateKey>, connection: Connection, message: SendMessage, answer_channel: tokio::sync::oneshot::Sender<Result<(), ClientError>>)
@@ -113,36 +113,48 @@ pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
         {
             NetCommand::Send(message, answer_channel) =>
             {
-                let connection = make_connection(id, message.metadata.receiver, &config, &endpoint, &mut outgoing).await;
-                tokio::spawn(
-                    handle_connection(
-                        id,
-                        #[cfg(feature = "sessions")]
-                        session,
-                        #[cfg(feature = "signing")]
-                        signing_key.clone(),
-                        connection,
-                        message,
-                        answer_channel
-                    )
-                );
+                match make_connection(id, message.metadata.receiver, &config, &endpoint, &mut outgoing).await
+                {
+                    Err(e) => answer_channel.send(Err(e)).expect("No longer waiting for result"),
+                    Ok(connection) =>
+                    {
+                        tokio::spawn(
+                            handle_connection(
+                                id,
+                                #[cfg(feature = "sessions")]
+                                session,
+                                #[cfg(feature = "signing")]
+                                signing_key.clone(),
+                                connection,
+                                message,
+                                answer_channel
+                            )
+                        );
+                    },
+                }
             },
             #[cfg(feature = "collective-consistency")]
             NetCommand::SendCheck(message, receiver, answer_channel) =>
             {
-                let connection = make_connection(id, receiver, &config, &endpoint, &mut outgoing).await;
-                tokio::spawn(
-                    handle_connection(
-                        id,
-                        #[cfg(feature = "sessions")]
-                        session,
-                        #[cfg(feature = "signing")]
-                        signing_key.clone(),
-                        connection,
-                        message,
-                        answer_channel
-                    )
-                );
+                match make_connection(id, receiver, &config, &endpoint, &mut outgoing).await
+                {
+                    Err(e) => answer_channel.send(Err(e)).expect("No longer waiting for result"),
+                    Ok(connection) =>
+                    {
+                        tokio::spawn(
+                            handle_connection(
+                                id,
+                                #[cfg(feature = "sessions")]
+                                session,
+                                #[cfg(feature = "signing")]
+                                signing_key.clone(),
+                                connection,
+                                message,
+                                answer_channel
+                            )
+                        );
+                    },
+                }
             },
         }
     }

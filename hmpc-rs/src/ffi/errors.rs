@@ -1,4 +1,4 @@
-use quinn::{ConnectionError, ReadError, WriteError};
+use quinn::{ConnectError, ConnectionError, ReadError, WriteError};
 
 #[cfg(feature = "collective-consistency")]
 use crate::net::errors::ConsistencyCheckError;
@@ -15,6 +15,8 @@ pub enum SendErrc
     InvalidHandle,
     InvalidPointer,
     InvalidSize,
+    InvalidServerAddress,
+    InvalidServerName,
     ChannelCouldNotReceive,
     ChannelCouldNotSend,
     ConnectionVersionMismatch,
@@ -25,9 +27,27 @@ pub enum SendErrc
     ConnectionLocallyClosed,
     ConnectionsExhausted,
     ApplicationClosed,
+    EndpointNotConfigured,
+    EndpointStopped,
+    EndpointVersionUnsupported,
     StreamStopped,
     StreamClosed,
     StreamRejected,
+}
+
+impl From<ConnectError> for SendErrc
+{
+    fn from(value: ConnectError) -> Self {
+        match value
+        {
+            ConnectError::EndpointStopping => Self::EndpointStopped,
+            ConnectError::CidsExhausted => Self::ConnectionsExhausted,
+            ConnectError::InvalidServerName(_) => Self::InvalidServerName,
+            ConnectError::InvalidRemoteAddress(_) => Self::InvalidServerAddress,
+            ConnectError::NoDefaultClientConfig => Self::EndpointNotConfigured,
+            ConnectError::UnsupportedVersion => Self::EndpointVersionUnsupported,
+        }
+    }
 }
 
 impl From<ConnectionError> for SendErrc
@@ -56,6 +76,7 @@ impl From<SendError> for SendErrc
         {
             SendError::Send(_) => Self::ChannelCouldNotSend,
             SendError::Receive(_) => Self::ChannelCouldNotReceive,
+            SendError::Client(ClientError::Connect(connect)) => connect.into(),
             SendError::Client(ClientError::Connection(connection)) => connection.into(),
             SendError::Client(ClientError::Write(write)) => match write
             {
@@ -196,6 +217,8 @@ pub enum SendReceiveErrc
     InvalidSize,
     InvalidCommunicator,
     InvalidMetadata,
+    InvalidServerAddress,
+    InvalidServerName,
     VersionMismatch,
     FeatureMismatch,
     ChannelCouldNotReceive,
@@ -208,6 +231,9 @@ pub enum SendReceiveErrc
     ConnectionLocallyClosed,
     ConnectionsExhausted,
     ApplicationClosed,
+    EndpointNotConfigured,
+    EndpointStopped,
+    EndpointVersionUnsupported,
     StreamFinishedEarly,
     StreamReset,
     StreamStopped,
@@ -241,6 +267,8 @@ impl From<SendErrc> for SendReceiveErrc
             SendErrc::InvalidHandle => Self::InvalidHandle,
             SendErrc::InvalidPointer => Self::InvalidPointer,
             SendErrc::InvalidSize => Self::InvalidSize,
+            SendErrc::InvalidServerAddress => Self::InvalidServerAddress,
+            SendErrc::InvalidServerName => Self::InvalidServerName,
             SendErrc::ChannelCouldNotReceive => Self::ChannelCouldNotReceive,
             SendErrc::ChannelCouldNotSend => Self::ChannelCouldNotSend,
             SendErrc::ConnectionVersionMismatch => Self::ConnectionVersionMismatch,
@@ -251,6 +279,9 @@ impl From<SendErrc> for SendReceiveErrc
             SendErrc::ConnectionLocallyClosed => Self::ConnectionLocallyClosed,
             SendErrc::ConnectionsExhausted => Self::ConnectionsExhausted,
             SendErrc::ApplicationClosed => Self::ApplicationClosed,
+            SendErrc::EndpointNotConfigured => Self::EndpointNotConfigured,
+            SendErrc::EndpointStopped => Self::EndpointStopped,
+            SendErrc::EndpointVersionUnsupported => Self::EndpointVersionUnsupported,
             SendErrc::StreamStopped => Self::StreamStopped,
             SendErrc::StreamClosed => Self::StreamClosed,
             SendErrc::StreamRejected => Self::StreamRejected,
