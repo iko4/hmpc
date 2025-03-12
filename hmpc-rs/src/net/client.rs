@@ -115,7 +115,13 @@ pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
             {
                 match make_connection(id, message.metadata.receiver, &config, &endpoint, &mut outgoing).await
                 {
-                    Err(e) => answer_channel.send(Err(e)).expect("No longer waiting for result"),
+                    Err(e) =>
+                    {
+                        if let Err(_) = answer_channel.send(Err(e))
+                        {
+                            error!("[Party {}] No longer waiting to send", id);
+                        }
+                    },
                     Ok(connection) =>
                     {
                         tokio::spawn(
@@ -138,7 +144,13 @@ pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
             {
                 match make_connection(id, receiver, &config, &endpoint, &mut outgoing).await
                 {
-                    Err(e) => answer_channel.send(Err(e)).expect("No longer waiting for result"),
+                    Err(e) =>
+                    {
+                        if let Err(_) = answer_channel.send(Err(e))
+                        {
+                            error!("[Party {}] No longer waiting to send consistency check", id);
+                        }
+                    },
                     Ok(connection) =>
                     {
                         tokio::spawn(
