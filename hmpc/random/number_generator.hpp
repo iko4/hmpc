@@ -65,7 +65,7 @@ namespace hmpc::random
         template<hmpc::write_only_limb_span Result>
         constexpr void uniform(Result result) HMPC_NOEXCEPT
         {
-            hmpc::iter::for_range<result.limb_size>([&](auto i)
+            hmpc::iter::for_each(hmpc::range(result.limb_size), [&](auto i)
             {
                 result.write(i, state[block_index++]);
                 if (block_index == engine_type::block_size)
@@ -79,7 +79,7 @@ namespace hmpc::random
         template<hmpc::write_only_bit_span Result>
         constexpr void uniform(Result result) HMPC_NOEXCEPT
         {
-            hmpc::iter::for_range<result.limb_size>([&](auto i)
+            hmpc::iter::for_each(hmpc::range(result.limb_size), [&](auto i)
             {
                 result.write(i, state[block_index++], hmpc::access::normal);
                 if (block_index == engine_type::block_size)

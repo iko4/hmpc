@@ -199,7 +199,7 @@ namespace hmpc::expr
 
         using operation_type = Operation;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
         using is_complex = void;
 
         inner_type inner;

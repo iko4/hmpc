@@ -11,7 +11,7 @@ namespace hmpc::core::num
         requires (hmpc::same_limb_types<Result, Left, Right>)
     constexpr auto subtract(Result result, Left left, Right right, Borrow borrow = {}) HMPC_NOEXCEPT
     {
-        return hmpc::iter::scan_range<result.limb_size>([&](auto i, auto borrow)
+        return hmpc::iter::scan(hmpc::range(result.limb_size), [&](auto i, auto borrow)
         {
             auto [difference, new_borrow] = hmpc::core::subtract(left.extended_read(i), right.extended_read(i), borrow);
             result.write(i, difference);

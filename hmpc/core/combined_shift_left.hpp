@@ -4,6 +4,7 @@
 #include <hmpc/core/limb_traits.hpp>
 #include <hmpc/core/shift_left.hpp>
 #include <hmpc/core/shift_right.hpp>
+#include <hmpc/iter/prev.hpp>
 
 namespace hmpc::core
 {
@@ -14,7 +15,7 @@ namespace hmpc::core
         using limb_type = hmpc::traits::remove_constant_t<Lower>;
         using limb_traits = hmpc::core::limb_traits<limb_type>;
 
-        auto complementary_shift = hmpc::size_constant_of<limb_traits::bit_size - Shift>;
+        auto complementary_shift = hmpc::iter::prev(limb_traits::bit_size, shift);
 
         return bit_or(shift_left(upper, shift), shift_right(lower, complementary_shift));
     }

@@ -6,6 +6,10 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## Unreleased
 
+### Added
+
+- Range type for iteration.
+
 ### Changed
 
 - Upgrade container image to Ubuntu 24.04.
@@ -13,6 +17,8 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 - Format via standard library instead of fmt library.
 - Make party ID a new type (outside of net namespace).
 - Session handling changed: Function to explicitly request change via environment is removed and is now default behavior.
+- Make more member constants constant.
+- Use new range type for iteration.
 
 ### Fixed
 

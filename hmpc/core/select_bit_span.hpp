@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hmpc/core/bit_span.hpp>
+#include <hmpc/core/max.hpp>
 #include <hmpc/core/select.hpp>
 
 namespace hmpc::core
@@ -17,10 +18,10 @@ namespace hmpc::core
 
         static_assert(hmpc::access::is_read_only<access_type>);
 
-        static constexpr hmpc::size bit_size = std::max(false_bit_span::bit_size, true_bit_span::bit_size);
-        static constexpr hmpc::signedness signedness = hmpc::common_signedness(false_bit_span::signedness, true_bit_span::signedness);
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size limb_size = std::max(false_bit_span::limb_size, true_bit_span::limb_size);
+        static constexpr auto bit_size = hmpc::core::max(false_bit_span::bit_size, true_bit_span::bit_size);
+        static constexpr auto signedness = hmpc::common_signedness(false_bit_span::signedness, true_bit_span::signedness);
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto limb_size = hmpc::core::max(false_bit_span::limb_size, true_bit_span::limb_size);
 
         /// Data members
         [[no_unique_address]] false_bit_span false_data;

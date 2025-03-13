@@ -160,7 +160,7 @@ TEMPLATE_PRODUCT_TEST_CASE_SIG("Unsigned integer operations", "[ints][uint]", ((
         REQUIRE((to_uint32(~left).data[0].data & mask) == ((~x) & mask));
         REQUIRE((to_uint32(~left ^ left).data[0].data & mask) == mask);
 
-        hmpc::iter::for_range<hmpc::size{10}>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<10>), [&](auto i)
         {
             REQUIRE((to_uint32(left << i).data[0].data & mask) == (((x & mask) << i) & mask));
             REQUIRE((to_uint32(left >> i).data[0].data & mask) == (((x & mask) >> i) & mask));

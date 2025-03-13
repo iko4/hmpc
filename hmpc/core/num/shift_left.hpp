@@ -3,7 +3,7 @@
 #include <hmpc/core/bit_span.hpp>
 #include <hmpc/core/combined_shift_left.hpp>
 #include <hmpc/core/compiletime_bit_span.hpp>
-#include <hmpc/iter/for_reverse_range.hpp>
+#include <hmpc/iter/for_each_reverse_range.hpp>
 #include <hmpc/iter/prev.hpp>
 
 namespace hmpc::core::num
@@ -14,7 +14,7 @@ namespace hmpc::core::num
     {
         using limb_type = Result::limb_type;
         static_assert(Shift >= 0);
-        hmpc::iter::for_reverse_range<result.limb_size>([&](auto i)
+        hmpc::iter::for_each_reverse(hmpc::range(result.limb_size), [&](auto i)
         {
             constexpr auto limb_shift = hmpc::size_constant_of<Shift / value.limb_bit_size>;
             constexpr auto bit_shift = hmpc::size_constant_of<Shift % value.limb_bit_size>;

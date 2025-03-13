@@ -2,6 +2,8 @@
 
 #include <hmpc/comp/vector.hpp>
 #include <hmpc/config.hpp>
+#include <hmpc/core/divide.hpp>
+#include <hmpc/core/lcm.hpp>
 #include <hmpc/core/size_limb_span.hpp>
 #include <hmpc/crypto/cipher.hpp>
 #include <hmpc/expr/cache.hpp>
@@ -74,7 +76,7 @@ namespace hmpc::expr::crypto
         using inner_value_type = inner_type::value_type;
         using inner_element_type = hmpc::traits::element_type_t<inner_value_type>;
         using inner_limb_type = hmpc::traits::limb_type_t<inner_element_type>;
-        static constexpr hmpc::size limb_size = hmpc::traits::limb_size_v<inner_value_type>;
+        static constexpr auto limb_size = hmpc::traits::limb_size<inner_value_type>{};
         using limb_vector_type = hmpc::comp::vector<limb_type, limb_size>;
 
         using shape_type = hmpc::traits::element_shape_t<
@@ -85,14 +87,14 @@ namespace hmpc::expr::crypto
 
         static_assert(std::same_as<limb_type, inner_limb_type>);
 
-        static constexpr hmpc::size block_size = engine_type::block_size;
-        static constexpr hmpc::size batch_size = std::lcm(block_size, limb_size);
-        static constexpr hmpc::size elements_per_batch = batch_size / limb_size;
+        static constexpr auto block_size = engine_type::block_size;
+        static constexpr auto batch_size = hmpc::core::lcm(block_size, limb_size);
+        static constexpr auto elements_per_batch = hmpc::size_constant_of<batch_size / limb_size>;
         static constexpr hmpc::size blocks_per_batch = batch_size / block_size;
 
         using cipher_expression_type = cipher_expression<engine_type>;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
         using is_complex = void;
 
         cipher_expression_type cipher;
@@ -130,14 +132,14 @@ namespace hmpc::expr::crypto
                 // TODO: number of blocks should be less than hmpc::core::shift_left(hmpc::constants::one, hmpc::size_constant_of<engine_type::counter_size * limb_type::bit_size>)
                 auto element_count = element_shape.size();
                 auto limb_count = element_count * limb_size;
-                auto batch_count = hmpc::detail::div_ceil(limb_count, batch_size);
+                auto batch_count = hmpc::core::ceil_divide(limb_count, batch_size);
                 auto storage = cipher_storage{cipher};
 
                 handler.parallel_for(sycl::range{batch_count}, [=](hmpc::size b)
                 {
                     auto cipher = storage.cipher(b * blocks_per_batch);
 
-                    hmpc::iter::for_range<elements_per_batch>([&](auto e)
+                    hmpc::iter::for_each(hmpc::range(elements_per_batch), [&](auto e)
                     {
                         auto i = b * elements_per_batch + e;
 
@@ -162,7 +164,7 @@ namespace hmpc::expr::crypto
                             hmpc::core::limb_array<limb_size, limb_type> encrypted_limbs;
                             cipher.enc(encrypted_limbs.span(hmpc::access::write), element.span(hmpc::access::read));
 
-                            hmpc::iter::for_range<limb_size>([&](auto j)
+                            hmpc::iter::for_each(hmpc::range(limb_size), [&](auto j)
                             {
                                 write[i * limb_size + j] = encrypted_limbs[j];
                             });
@@ -189,7 +191,7 @@ namespace hmpc::expr::crypto
 
         using element_type = hmpc::traits::element_type_t<value_type>;
         using limb_type = hmpc::traits::limb_type_t<value_type>;
-        static constexpr hmpc::size limb_size = hmpc::traits::limb_size_v<value_type>;
+        static constexpr auto limb_size = hmpc::traits::limb_size<value_type>{};
 
         static_assert(std::same_as<limb_type, typename inner_type::value_type>);
         static_assert(inner_type::shape_type::rank >= 1);
@@ -219,14 +221,14 @@ namespace hmpc::expr::crypto
             )
         >;
 
-        static constexpr hmpc::size block_size = engine_type::block_size;
-        static constexpr hmpc::size batch_size = std::lcm(block_size, limb_size);
-        static constexpr hmpc::size elements_per_batch = batch_size / limb_size;
+        static constexpr auto block_size = engine_type::block_size;
+        static constexpr auto batch_size = hmpc::core::lcm(block_size, limb_size);
+        static constexpr auto elements_per_batch = hmpc::size_constant_of<batch_size / limb_size>;
         static constexpr hmpc::size blocks_per_batch = batch_size / block_size;
 
         using cipher_expression_type = cipher_expression<engine_type>;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
         using is_complex = void;
 
         cipher_expression_type cipher;
@@ -271,19 +273,19 @@ namespace hmpc::expr::crypto
                 auto capability_data = get_capability_data(shape);
                 // TODO: number of blocks should be less than hmpc::core::shift_left(hmpc::constants::one, hmpc::size_constant_of<engine_type::counter_size * limb_type::bit_size>)
                 auto limb_count = shape.size();
-                auto batch_count = hmpc::detail::div_ceil(limb_count, batch_size);
+                auto batch_count = hmpc::core::ceil_divide(limb_count, batch_size);
                 auto storage = cipher_storage{cipher};
 
                 handler.parallel_for(sycl::range{batch_count}, [=](hmpc::size b)
                 {
                     auto cipher = storage.cipher(b * blocks_per_batch);
 
-                    hmpc::iter::for_range<elements_per_batch>([&](auto e)
+                    hmpc::iter::for_each(hmpc::range(elements_per_batch), [&](auto e)
                     {
                         auto i = b * elements_per_batch + e;
 
                         hmpc::core::limb_array<limb_size, limb_type> encrypted_limbs;
-                        hmpc::iter::for_range<limb_size>([&](auto l)
+                        hmpc::iter::for_each(hmpc::range(limb_size), [&](auto l)
                         {
                             auto index = [&]()
                             {

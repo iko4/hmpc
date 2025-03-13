@@ -39,7 +39,7 @@ namespace hmpc::detail
     template<typename T, T... Values>
     struct constant_list : public constant_list_base<std::make_integer_sequence<hmpc::size, sizeof...(Values)>, T, Values...>
     {
-        static constexpr hmpc::size size = sizeof...(Values);
+        static constexpr auto size = hmpc::size_constant_of<sizeof...(Values)>;
 
         template<T Value>
         static constexpr bool contains(hmpc::constant<T, Value> = {}) noexcept

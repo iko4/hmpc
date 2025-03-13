@@ -25,7 +25,7 @@ namespace hmpc::core
             }
             else if constexpr (left.value == limb_traits::all_ones)
             {
-                return hmpc::constant_of<limb_traits::all_ones>;
+                return limb_traits::all_ones;
             }
             else
             {
@@ -40,7 +40,7 @@ namespace hmpc::core
             }
             else if constexpr (right.value == limb_traits::all_ones)
             {
-                return hmpc::constant_of<limb_traits::all_ones>;
+                return limb_traits::all_ones;
             }
             else
             {

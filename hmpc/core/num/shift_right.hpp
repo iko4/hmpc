@@ -3,7 +3,7 @@
 #include <hmpc/core/bit_span.hpp>
 #include <hmpc/core/combined_shift_right.hpp>
 #include <hmpc/core/compiletime_bit_span.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
 #include <hmpc/iter/next.hpp>
 
 namespace hmpc::core::num
@@ -13,7 +13,7 @@ namespace hmpc::core::num
     constexpr void shift_right(Result result, Value value, hmpc::size_constant<Shift> = {}) HMPC_NOEXCEPT
     {
         static_assert(Shift >= 0);
-        hmpc::iter::for_range<result.limb_size>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(result.limb_size), [&](auto i)
         {
             constexpr auto limb_shift = hmpc::size_constant_of<Shift / value.limb_bit_size>;
             constexpr auto bit_shift = hmpc::size_constant_of<Shift % value.limb_bit_size>;

@@ -13,10 +13,10 @@ namespace hmpc::core
         using access_type = inner_bit_span::access_type;
         using normal_type = inner_bit_span::normal_type;
 
-        static constexpr hmpc::size bit_size = inner_bit_span::bit_size;
-        static constexpr hmpc::signedness signedness = inner_bit_span::signedness;
-        static constexpr hmpc::size limb_bit_size = inner_bit_span::limb_bit_size;
-        static constexpr hmpc::size limb_size = inner_bit_span::limb_size;
+        static constexpr auto bit_size = inner_bit_span::bit_size;
+        static constexpr auto signedness = inner_bit_span::signedness;
+        static constexpr auto limb_bit_size = inner_bit_span::limb_bit_size;
+        static constexpr auto limb_size = inner_bit_span::limb_size;
 
         /// Data members
         [[no_unique_address]] inner_bit_span data;

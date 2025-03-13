@@ -14,7 +14,7 @@ namespace hmpc::expr
         using shape_type = decltype(hmpc::unsqueeze(std::declval<typename inner_type::shape_type>(), hmpc::signed_size_constant_of<Dim>));
         using element_shape_type = hmpc::traits::element_shape_t<value_type, shape_type>;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
 
         inner_type inner;
 
@@ -53,7 +53,7 @@ namespace hmpc::expr
     template<hmpc::signed_size Dim, hmpc::expression_tuple E>
     constexpr auto unsqueeze(E e, hmpc::signed_size_constant<Dim> dim = {}) HMPC_NOEXCEPT
     {
-        return hmpc::iter::for_packed_range<E::arity>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(E::arity), [&](auto... i)
         {
             return E::from_parts(unsqueeze(e.get(i), dim)...);
         });

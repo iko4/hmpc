@@ -18,8 +18,15 @@ namespace hmpc::iter
     {
         using type = decltype(Index);
         static_assert(Index >= 0);
-        static_assert(Offset >= 0);
-        static_assert(std::numeric_limits<type>::max() - Offset >= Index);
+        if constexpr (Offset < 0)
+        {
+            static_assert(Index + Offset >= 0);
+        }
+        else
+        {
+            static_assert(Offset >= 0);
+            static_assert(std::numeric_limits<type>::max() - Offset >= Index);
+        }
         return hmpc::constant<type, Index + Offset>{};
     }
 }

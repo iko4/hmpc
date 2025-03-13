@@ -49,7 +49,7 @@ TEST_CASE("Network: Broadcast", "[net][queue][ffi][broadcast]")
         std::vector<std::jthread> threads;
         threads.reserve(communicator.size + 1);
 
-        hmpc::iter::for_range<communicator.size + 1>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(hmpc::iter::next(communicator.size)), [&](auto i)
         {
             threads.emplace_back(
                 std::jthread([&, i]()
@@ -122,7 +122,7 @@ TEST_CASE("Network: Gather", "[net][queue][ffi][gather]")
         std::vector<std::jthread> threads;
         threads.reserve(communicator.size);
 
-        hmpc::iter::for_range<communicator.size - 1>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(hmpc::iter::prev(communicator.size)), [&](auto i)
         {
             threads.emplace_back(
                 std::jthread([&, i]()
@@ -193,7 +193,7 @@ TEST_CASE("Network: All-gather", "[net][queue][ffi][all_gather]")
         std::vector<std::jthread> threads;
         threads.reserve(communicator.size);
 
-        hmpc::iter::for_range<communicator.size>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(communicator.size), [&](auto i)
         {
             threads.emplace_back(
                 std::jthread([&, i]()

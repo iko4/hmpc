@@ -4,7 +4,8 @@
 #include <hmpc/detail/type_list.hpp>
 #include <hmpc/detail/type_map_element.hpp>
 #include <hmpc/detail/type_tag.hpp>
-#include <hmpc/iter/for_packed_range.hpp>
+#include <hmpc/iter/next.hpp>
+#include <hmpc/iter/unpack_range.hpp>
 
 namespace hmpc::detail
 {
@@ -32,7 +33,7 @@ namespace hmpc::detail
     template<typename... Ks, typename... Vs>
     struct type_map<hmpc::detail::type_list<Ks...>, hmpc::detail::type_list<Vs...>> : public type_map_base<std::make_integer_sequence<hmpc::size, sizeof...(Ks)>, hmpc::detail::type_list<Ks...>, hmpc::detail::type_list<Vs...>>
     {
-        static constexpr hmpc::size size = sizeof...(Ks);
+        static constexpr auto size = hmpc::size_constant_of<sizeof...(Ks)>;
 
         template<typename K>
         static constexpr bool contains(hmpc::detail::type_tag<K> = {}) noexcept
@@ -68,7 +69,7 @@ namespace hmpc::detail
             using This = std::remove_cvref_t<decltype(*this)>;
             if constexpr (This::contains(key))
             {
-                constexpr hmpc::size index = This::index_of(key);
+                constexpr auto index = This::index_of(key);
                 if constexpr (std::same_as<std::remove_cvref_t<decltype(this->get(key))>, T>)
                 {
                     this->get(key) = std::forward<V>(value);
@@ -76,9 +77,9 @@ namespace hmpc::detail
                 }
                 else
                 {
-                    return hmpc::iter::for_packed_range<index>([&](auto... i) -> decltype(auto)
+                    return hmpc::iter::unpack(hmpc::range(index), [&](auto... i) -> decltype(auto)
                     {
-                        return hmpc::iter::for_packed_range<index + 1, This::size>([&](auto... j) -> decltype(auto)
+                        return hmpc::iter::unpack(hmpc::range(hmpc::iter::next(index), This::size), [&](auto... j) -> decltype(auto)
                         {
                             constexpr auto values = hmpc::detail::type_list<Vs...>{};
 

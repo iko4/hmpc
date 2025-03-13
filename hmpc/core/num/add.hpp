@@ -11,7 +11,7 @@ namespace hmpc::core::num
         requires (hmpc::same_limb_types<Result, Left, Right>)
     constexpr auto add(Result result, Left left, Right right, Carry carry = {}) HMPC_NOEXCEPT
     {
-        return hmpc::iter::scan_range<result.limb_size>([&](auto i, auto carry)
+        return hmpc::iter::scan(hmpc::range(result.limb_size), [&](auto i, auto carry)
         {
             auto [sum, new_carry] = hmpc::core::extended_add(left.extended_read(i), right.extended_read(i), carry);
             result.write(i, sum);

@@ -21,7 +21,7 @@ namespace hmpc::expr::crypto::lhe
         constexpr auto rank = C1::shape_type::rank;
         static_assert(Key::shape_type::rank == 0);
 
-        auto s = hmpc::iter::scan_range<rank>([](auto, auto s)
+        auto s = hmpc::iter::scan(hmpc::range(rank), [](auto, auto s)
         {
             return hmpc::expr::unsqueeze(s, hmpc::constants::minus_one);
         }, key);

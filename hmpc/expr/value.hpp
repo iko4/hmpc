@@ -14,7 +14,7 @@ namespace hmpc::expr
         using shape_type = hmpc::shape<>;
         using element_shape_type = shape_type;
 
-        static constexpr hmpc::size arity = 0;
+        static constexpr auto arity = hmpc::size_constant_of<0>;
 
         constexpr shape_type shape() const noexcept
         {

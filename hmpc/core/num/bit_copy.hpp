@@ -2,7 +2,7 @@
 
 #include <hmpc/core/bit_span.hpp>
 #include <hmpc/core/compiletime_bit_span.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
 
 namespace hmpc::core::num
 {
@@ -10,7 +10,7 @@ namespace hmpc::core::num
         requires (hmpc::same_limb_types<Result, Value>)
     constexpr void bit_copy(Result result, Value value) HMPC_NOEXCEPT
     {
-        hmpc::iter::for_range<result.limb_size>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(result.limb_size), [&](auto i)
         {
             result.write(i, value.extended_read(i));
         });

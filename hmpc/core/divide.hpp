@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hmpc/core/limb_traits.hpp>
+#include <hmpc/detail/utility.hpp>
 
 namespace hmpc::core
 {
@@ -21,6 +22,28 @@ namespace hmpc::core
         else
         {
             return limb_type{quotient};
+        }
+    }
+
+    template<typename Numerator, typename Denominator>
+        requires (hmpc::same_without_constant<Numerator, Denominator>)
+    constexpr auto ceil_divide(Numerator numerator, Denominator denominator)
+    {
+        if constexpr (hmpc::is_constant<Numerator> and hmpc::is_constant<Denominator>)
+        {
+            return hmpc::constant_of<hmpc::detail::div_ceil(numerator.value, denominator.value)>;
+        }
+        else if constexpr (hmpc::is_constant<Numerator>)
+        {
+            return hmpc::detail::div_ceil(numerator.value, denominator);
+        }
+        else if constexpr (hmpc::is_constant<Denominator>)
+        {
+            return hmpc::detail::div_ceil(numerator, denominator.value);
+        }
+        else
+        {
+            return hmpc::detail::div_ceil(numerator, denominator);
         }
     }
 }

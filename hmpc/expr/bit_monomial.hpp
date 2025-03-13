@@ -129,7 +129,7 @@ namespace hmpc::expr
 
         static constexpr auto vector_size = hmpc::traits::vector_size_v<value_type>;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
 
         inner_type inner;
 

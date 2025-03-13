@@ -5,8 +5,8 @@
 #include <hmpc/core/limb_array.hpp>
 #include <hmpc/core/uint.hpp>
 #include <hmpc/ints/num/add.hpp>
-#include <hmpc/iter/for_packed_range.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/unpack_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
 
 namespace hmpc::crypto::detail
 {
@@ -31,9 +31,9 @@ namespace hmpc::crypto::detail
 
     constexpr void chacha_double_round(hmpc::core::limb_span<16, hmpc::core::uint32, hmpc::access::read_write_tag> state) HMPC_NOEXCEPT
     {
-        hmpc::iter::for_range<hmpc::size{4}>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<4>), [&](auto i)
         {
-            hmpc::iter::for_packed_range<hmpc::size{4}>([&](auto... j)
+            hmpc::iter::unpack(hmpc::range(hmpc::size_constant_of<4>), [&](auto... j)
             {
                 chacha_quarter_round(state[hmpc::size_constant_of<i + 4 * j>]...);
             });
@@ -55,9 +55,9 @@ namespace hmpc::crypto
         static_assert(NonceSize > 0);
         static_assert(CounterSize + NonceSize == 4);
 
-        static constexpr hmpc::size key_size = 8;
-        static constexpr hmpc::size counter_size = CounterSize;
-        static constexpr hmpc::size nonce_size = NonceSize;
+        static constexpr auto key_size = hmpc::size_constant_of<8>;
+        static constexpr auto counter_size = hmpc::size_constant_of<CounterSize>;
+        static constexpr auto nonce_size = hmpc::size_constant_of<NonceSize>;
 
         using value_type = hmpc::core::uint32;
 
@@ -72,11 +72,14 @@ namespace hmpc::crypto
         static_assert(Rounds >= 8);
         static_assert(Rounds % 2 == 0);
 
-        static constexpr hmpc::size key_size = 8;
-        static constexpr hmpc::size counter_size = CounterSize;
-        static constexpr hmpc::size nonce_size = NonceSize;
-        static constexpr hmpc::size constant_size = 4;
-        static constexpr hmpc::size block_size = 16;
+        static constexpr auto rounds = hmpc::size_constant_of<Rounds>;
+        static constexpr auto half_rounds = hmpc::size_constant_of<Rounds / 2>;
+
+        static constexpr auto key_size = hmpc::size_constant_of<8>;
+        static constexpr auto counter_size = hmpc::size_constant_of<CounterSize>;
+        static constexpr auto nonce_size = hmpc::size_constant_of<NonceSize>;
+        static constexpr auto constant_size = hmpc::size_constant_of<4>;
+        static constexpr auto block_size = hmpc::size_constant_of<16>;
 
         using param_type = chacha_param<nonce_size, counter_size>;
         using value_type = hmpc::core::uint32;
@@ -91,11 +94,11 @@ namespace hmpc::crypto
         constexpr chacha(param_type param) HMPC_NOEXCEPT
             : state
             {
-                hmpc::iter::for_packed_range<key_size>([&](auto... i)
+                hmpc::iter::unpack(hmpc::range(key_size), [&](auto... i)
                 {
-                    return hmpc::iter::for_packed_range<counter_size>([&](auto... j)
+                    return hmpc::iter::unpack(hmpc::range(counter_size), [&](auto... j)
                     {
-                        return hmpc::iter::for_packed_range<nonce_size>([&](auto... k)
+                        return hmpc::iter::unpack(hmpc::range(nonce_size), [&](auto... k)
                         {
                             return block_type
                             {
@@ -127,15 +130,15 @@ namespace hmpc::crypto
         constexpr void param(param_type param) HMPC_NOEXCEPT
         {
             // TODO: replace with span-based copies
-            hmpc::iter::for_range<key_size>([&](auto i)
+            hmpc::iter::for_each(hmpc::range(key_size), [&](auto i)
             {
                 state[i + constant_size] = param.key[i];
             });
-            hmpc::iter::for_range<counter_size>([&](auto i)
+            hmpc::iter::for_each(hmpc::range(counter_size), [&](auto i)
             {
                 state[i + constant_size + key_size] = param.counter[i];
             });
-            hmpc::iter::for_range<nonce_size>([&](auto i)
+            hmpc::iter::for_each(hmpc::range(nonce_size), [&](auto i)
             {
                 state[i + constant_size + key_size + counter_size] = param.nonce[i];
             });
@@ -144,12 +147,12 @@ namespace hmpc::crypto
         constexpr block_type operator()() HMPC_NOEXCEPT
         {
             auto result = state;
-            hmpc::iter::for_range<Rounds / 2>([&](auto)
+            hmpc::iter::for_each(hmpc::range(half_rounds), [&](auto)
             {
                 hmpc::crypto::detail::chacha_double_round(result.span());
             });
 
-            hmpc::iter::for_range<block_size>([&](auto i)
+            hmpc::iter::for_each(hmpc::range(block_size), [&](auto i)
             {
                 result[i] += state[i];
             });

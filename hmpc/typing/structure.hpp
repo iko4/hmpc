@@ -2,7 +2,7 @@
 
 #include <hmpc/comp/tensor.hpp>
 #include <hmpc/constant.hpp>
-#include <hmpc/iter/for_packed_range.hpp>
+#include <hmpc/iter/unpack_range.hpp>
 
 #include <type_traits>
 
@@ -43,7 +43,7 @@ namespace hmpc
     template<hmpc::structure T>
     T default_like(T const& structure)
     {
-        return hmpc::iter::for_packed_range<T::size>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(T::size), [&](auto... i)
         {
             return T::from_parts(default_like(structure.get(i))...);
         });
@@ -65,7 +65,7 @@ namespace hmpc
     template<hmpc::structure T, typename State>
     T empty_default(State state)
     {
-        return hmpc::iter::for_packed_range<T::size>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(T::size), [&](auto... i)
         {
             return T::from_parts(empty_default((static_cast<void>(i), state))...);
         });
@@ -106,7 +106,7 @@ namespace hmpc::typing
         struct structure_fields : public hmpc::size_constant<(structure_fields<T>::value + ...)>
         {
         };
-        
+
         template<typename T>
         struct structure_fields<T> : public hmpc::size_constant<1>
         {
@@ -114,7 +114,7 @@ namespace hmpc::typing
 
         template<hmpc::structure T>
         struct structure_fields<T> : public hmpc::size_constant<
-            hmpc::iter::for_packed_range<std::remove_cvref_t<T>::size>([](auto... i)
+            hmpc::iter::unpack(hmpc::range(std::remove_cvref_t<T>::size), [](auto... i)
             {
                 return (structure_fields<structure_element_t<T, i>>::value + ...);
             })
@@ -129,35 +129,35 @@ namespace hmpc::typing
         {
             template<hmpc::size I, hmpc::size ElementIndex, typename... T>
             struct structure_field_helper;
-    
+
             template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
             requires (structure_fields_v<T> <= I)
             struct structure_field_helper<I, ElementIndex, T, Rest...>
             {
                 using type = structure_field_helper<I - structure_fields_v<T>, 0, Rest...>::type;
             };
-            
+
             template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
             requires (structure_fields_v<T> > I and hmpc::structure<T> and hmpc::structure<structure_element_t<T, ElementIndex>> and structure_fields_v<structure_element_t<T, ElementIndex>> <= I)
             struct structure_field_helper<I, ElementIndex, T, Rest...>
             {
                 using type = structure_field_helper<I - structure_fields_v<structure_element_t<T, ElementIndex>>, ElementIndex + 1, T>::type;
             };
-    
+
             template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
             requires (structure_fields_v<T> > I and hmpc::structure<T> and hmpc::structure<structure_element_t<T, ElementIndex>> and structure_fields_v<structure_element_t<T, ElementIndex>> > I)
             struct structure_field_helper<I, ElementIndex, T, Rest...>
             {
                 using type = structure_field_helper<I, 0, structure_element_t<T, ElementIndex>>::type;
             };
-    
+
             template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
             requires (structure_fields_v<T> > I and hmpc::structure<T> and not hmpc::structure<structure_element_t<T, ElementIndex>> and I > 0)
             struct structure_field_helper<I, ElementIndex, T, Rest...>
             {
                 using type = structure_field_helper<I - 1, ElementIndex + 1, T>::type;
             };
-    
+
             template<hmpc::size I, hmpc::size ElementIndex, typename T, typename... Rest>
             requires (structure_fields_v<T> > I and hmpc::structure<T> and not hmpc::structure<structure_element_t<T, ElementIndex>> and I == 0)
             struct structure_field_helper<I, ElementIndex, T, Rest...>

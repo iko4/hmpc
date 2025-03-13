@@ -11,9 +11,9 @@ namespace hmpc::core::num
     constexpr auto is_normal(Value value, Mask mask, hmpc::size_constant<Bit> bit = {}) HMPC_NOEXCEPT
     {
         constexpr auto limb_bit_size = value.limb_bit_size;
-        constexpr hmpc::size normal_limb = bit / limb_bit_size;
+        constexpr auto normal_limb = hmpc::size_constant_of<bit / limb_bit_size>;
         constexpr hmpc::size normal_bit = (bit % limb_bit_size) + ((bit % limb_bit_size == 0) and bit != 0) * limb_bit_size;
-        return hmpc::iter::scan_range<normal_limb, value.limb_size>([&](auto i, auto normal)
+        return hmpc::iter::scan(hmpc::range(normal_limb, value.limb_size), [&](auto i, auto normal)
         {
             if constexpr (i == normal_limb)
             {

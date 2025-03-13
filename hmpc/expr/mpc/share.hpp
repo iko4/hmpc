@@ -20,7 +20,7 @@ namespace hmpc::expr::mpc
     {
         using is_tuple = void;
         static_assert(sizeof...(Shares) == sizeof...(Parties));
-        static constexpr hmpc::size arity = sizeof...(Shares);
+        static constexpr auto arity = hmpc::size_constant_of<sizeof...(Shares)>;
         static constexpr auto communicator = hmpc::net::communicator_for<Parties...>;
 
         std::tuple<Shares...> shares;
@@ -39,7 +39,7 @@ namespace hmpc::expr::mpc
 
         constexpr auto reconstruct() const
         {
-            return hmpc::iter::for_packed_range<arity>([&](auto... i)
+            return hmpc::iter::unpack(hmpc::range(arity), [&](auto... i)
             {
                 using namespace hmpc::expr::operators;
                 return (std::get<i>(shares) + ...);
@@ -55,7 +55,7 @@ namespace hmpc::expr::mpc
         value_type value;
 
         using is_tuple = void;
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
         static constexpr auto id = hmpc::party_constant_of<Id>;
         static constexpr auto communicator = hmpc::net::communicator_for<Parties...>;
 
@@ -150,8 +150,8 @@ namespace hmpc::expr::mpc
     template<auto Tag = []{}, typename T, hmpc::size... Dimensions, hmpc::party_id... Parties>
     constexpr auto shares(hmpc::comp::mpc::shares<hmpc::comp::tensor<T, Dimensions...>, Parties...>& shares)
     {
-        constexpr hmpc::size size = sizeof...(Parties);
-        return hmpc::iter::for_packed_range<size>([&](auto... i)
+        constexpr auto size = hmpc::size_constant_of<sizeof...(Parties)>;
+        return hmpc::iter::unpack(hmpc::range(size), [&](auto... i)
         {
             return shares_expression<hmpc::net::communicator<Parties...>, decltype(Parties)...>::from_parts(
                 hmpc::expr::tensor<hmpc::detail::unique_tag(Tag, i), T, Dimensions...>(shares.values[i])...

@@ -2,7 +2,7 @@
 
 #include <hmpc/config.hpp>
 #include <hmpc/iter/at_structure.hpp>
-#include <hmpc/iter/for_packed_range.hpp>
+#include <hmpc/iter/unpack_range.hpp>
 #include <hmpc/typing/structure.hpp>
 
 #include <type_traits>
@@ -20,8 +20,8 @@ namespace hmpc::iter
     template<typename F, typename... Ts>
     constexpr auto collect(F const& f, Ts&&... values) HMPC_NOEXCEPT
     {
-        constexpr hmpc::size size = hmpc::typing::traits::structure_fields_v<Ts...>;
-        return hmpc::iter::for_packed_range<size>([&](auto... i)
+        constexpr auto size = hmpc::typing::traits::structure_fields<Ts...>{};
+        return hmpc::iter::unpack(hmpc::range(size), [&](auto... i)
         {
             using first_type = detail::invoke_at_structure_field_t<F, 0, Ts&&...>;
             constexpr bool all_same = (std::same_as<first_type, detail::invoke_at_structure_field_t<F, i, Ts...>> and ...);
@@ -34,8 +34,8 @@ namespace hmpc::iter
     template<typename F, typename... Ts>
     constexpr auto collect_enumerated(F const& f, Ts&&... values) HMPC_NOEXCEPT
     {
-        constexpr hmpc::size size = hmpc::typing::traits::structure_fields_v<Ts...>;
-        return hmpc::iter::for_packed_range<size>([&](auto... i)
+        constexpr auto size = hmpc::typing::traits::structure_fields<Ts...>{};
+        return hmpc::iter::unpack(hmpc::range(size), [&](auto... i)
         {
             using first_type = detail::invoke_enumerate_structure_field_t<F, 0, Ts...>;
             constexpr bool all_same = (std::same_as<first_type, detail::invoke_enumerate_structure_field_t<F, i, Ts...>> and ...);

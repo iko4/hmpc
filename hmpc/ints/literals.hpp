@@ -17,19 +17,19 @@ namespace hmpc::detail::strings
     {
         using char_type = Char;
 
-        static constexpr hmpc::size size = Size;
+        static constexpr auto size = hmpc::size_constant_of<Size>;
 
         std::array<char_type, size> data;
 
         template<typename... Chars>
-        constexpr basic_fixed_string(Chars... chars) HMPC_NOEXCEPT
+        constexpr basic_fixed_string(Chars... chars) noexcept
             : data{chars...}
         {
             static_assert(sizeof...(Chars) == size);
         }
 
         template<std::convertible_to<char_type const> T>
-        constexpr basic_fixed_string(std::span<T, size> string) HMPC_NOEXCEPT
+        constexpr basic_fixed_string(std::span<T, size> string) noexcept
         {
             std::copy_n(begin(string), size, begin(data));
         }
@@ -40,7 +40,7 @@ namespace hmpc::detail::strings
         }
 
         template<hmpc::size Offset, hmpc::size SubstringLength = size - Offset>
-        constexpr auto substr(hmpc::size_constant<Offset> offset = {}, hmpc::size_constant<SubstringLength> substring_length = {}) const
+        constexpr auto substr(hmpc::size_constant<Offset> offset = {}, hmpc::size_constant<SubstringLength> substring_length = {}) const noexcept
         {
             static_assert(offset >= 0);
             static_assert(offset < size);
@@ -62,7 +62,7 @@ namespace hmpc::ints::literals
     template<hmpc::detail::strings::basic_fixed_string String>
     consteval auto parse_binary_literal()
     {
-        constexpr hmpc::size bit_size = hmpc::iter::scan_range<String.size>([](auto i, auto size)
+        constexpr hmpc::size bit_size = hmpc::iter::scan(hmpc::range(String.size), [](auto i, auto size)
         {
             switch (String[i])
             {
@@ -81,7 +81,7 @@ namespace hmpc::ints::literals
         hmpc::ints::ubigint<bit_size> result = {};
         using limb_type = decltype(result)::limb_type;
         using limb_traits = hmpc::core::limb_traits<limb_type>;
-        hmpc::iter::scan_reverse_range<String.size>([result = result.span(hmpc::access::read_write)](auto i, auto j)
+        hmpc::iter::scan_reverse(hmpc::range(String.size), [result = result.span(hmpc::access::read_write)](auto i, auto j)
         {
             constexpr auto c = String[i];
             if constexpr (c == '0')
@@ -106,7 +106,7 @@ namespace hmpc::ints::literals
     template<hmpc::detail::strings::basic_fixed_string String>
     consteval auto parse_hex_literal()
     {
-        constexpr hmpc::size bit_size = hmpc::iter::scan_range<String.size>([](auto i, auto size)
+        constexpr hmpc::size bit_size = hmpc::iter::scan(hmpc::range(String.size), [](auto i, auto size)
         {
             switch (String[i])
             {
@@ -149,7 +149,7 @@ namespace hmpc::ints::literals
         using limb_type = decltype(result)::limb_type;
         static_assert(result.limb_bit_size >= 4);
         static_assert(result.limb_bit_size % 4 == 0);
-        hmpc::iter::scan_reverse_range<String.size>([result = result.span(hmpc::access::read_write)](auto i, auto j)
+        hmpc::iter::scan_reverse(hmpc::range(String.size), [result = result.span(hmpc::access::read_write)](auto i, auto j)
         {
             constexpr auto bit = hmpc::size_constant_of<j % result.limb_bit_size>;
             constexpr auto limb = hmpc::size_constant_of<j / result.limb_bit_size>;
@@ -180,7 +180,7 @@ namespace hmpc::ints::literals
     template<hmpc::detail::strings::basic_fixed_string String>
     consteval auto parse_decimal_literal()
     {
-        constexpr auto large_result = hmpc::iter::scan_range<String.size>([](auto i, auto result)
+        constexpr auto large_result = hmpc::iter::scan(hmpc::range(String.size), [](auto i, auto result)
         {
             constexpr auto ten = hmpc::ints::ubigint<4>{10};
             constexpr auto c = String[i];

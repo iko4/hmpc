@@ -26,12 +26,12 @@ namespace hmpc::expr::crypto::lhe
         auto shape = plaintext.shape();
         constexpr auto rank = decltype(shape)::rank;
 
-        auto a = hmpc::iter::scan_range<rank>([](auto, auto a)
+        auto a = hmpc::iter::scan(hmpc::range(rank), [](auto, auto a)
         {
             return hmpc::expr::unsqueeze(a, hmpc::constants::minus_one);
         }, key.get(hmpc::constants::zero));
 
-        auto b = hmpc::iter::scan_range<rank>([](auto, auto b)
+        auto b = hmpc::iter::scan(hmpc::range(rank), [](auto, auto b)
         {
             return hmpc::expr::unsqueeze(b, hmpc::constants::minus_one);
         }, key.get(hmpc::constants::one));

@@ -39,7 +39,7 @@ namespace hmpc::expr
         using shape_type = inner_type::shape_type;
         using element_shape_type = hmpc::traits::element_shape_t<value_type, shape_type>;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
 
         inner_type inner;
 
@@ -96,7 +96,7 @@ namespace hmpc::expr
             }
             else if constexpr (expr.arity > 0)
             {
-                return hmpc::iter::scan_range<expr.arity>([&](auto i, auto&& traces)
+                return hmpc::iter::scan(hmpc::range(expr.arity), [&](auto i, auto&& traces)
                 {
                     return trace_expression(
                         std::forward<decltype(traces)>(traces),
@@ -117,7 +117,7 @@ namespace hmpc::expr
             {
                 auto traverse_children = [&]()
                 {
-                    return hmpc::iter::scan_range<expr.arity>([&](auto i, auto&& traces)
+                    return hmpc::iter::scan(hmpc::range(expr.arity), [&](auto i, auto&& traces)
                     {
                         return find_next_expression_to_trace(
                             std::forward<decltype(traces)>(traces),
@@ -128,7 +128,7 @@ namespace hmpc::expr
 
                 if constexpr (hmpc::cacheable_expression<E>)
                 {
-                    return hmpc::iter::scan_range<expr.arity>([&](auto i, auto&& traces)
+                    return hmpc::iter::scan(hmpc::range(expr.arity), [&](auto i, auto&& traces)
                     {
                         return trace_expression(
                             std::forward<decltype(traces)>(traces),
@@ -177,7 +177,7 @@ namespace hmpc::expr
             {
                 if constexpr (expr.arity > 0)
                 {
-                    return hmpc::iter::scan_range<expr.arity>([&](auto i, auto&& cache) -> decltype(auto)
+                    return hmpc::iter::scan(hmpc::range(expr.arity), [&](auto i, auto&& cache) -> decltype(auto)
                     {
                         return cache_expression(
                             std::forward<decltype(cache)>(cache),

@@ -66,12 +66,12 @@ TEST_CASE("ChaCha 20", "[crypto][chacha]")
 
         auto param = chacha.param();
 
-        hmpc::iter::for_range<hmpc::size{8}>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<8>), [&](auto i)
         {
             REQUIRE(param.key[i] == key[i]);
         });
         REQUIRE(param.counter[hmpc::constants::zero] == counter[0] + 1);
-        hmpc::iter::for_range<hmpc::size{3}>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<3>), [&](auto i)
         {
             REQUIRE(param.nonce[i] == nonce[i]);
         });

@@ -38,7 +38,7 @@ TEST_CASE("Unsigned big integer operations", "[ints][bigint][uint]")
     REQUIRE(bit_xor.bit_size == 10);
     REQUIRE(bit_xor.data[0].data == 46);
 
-    hmpc::iter::for_range<hmpc::size{10}>([&](auto i)
+    hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<10>), [&](auto i)
     {
         auto shifted_left = x << i;
         REQUIRE(shifted_left.bit_size == 10 + i);

@@ -5,9 +5,11 @@
 #include <hmpc/core/bit_span.hpp>
 #include <hmpc/core/compiletime_bit_array.hpp>
 #include <hmpc/core/compiletime_bit_span.hpp>
+#include <hmpc/core/min.hpp>
 #include <hmpc/core/multiply.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
 #include <hmpc/iter/next.hpp>
+#include <hmpc/iter/prev.hpp>
 #include <hmpc/iter/scan_range.hpp>
 
 #include <algorithm>
@@ -19,7 +21,8 @@ namespace hmpc::core::num
     constexpr void multiply(Result result, Left left, Right right) HMPC_NOEXCEPT
     {
         using limb_type = Result::limb_type;
-        hmpc::core::bit_array<std::min(result.bit_size, left.bit_size + right.bit_size), limb_type, result.signedness> intermediate_storage;
+        constexpr auto intermediate_size = hmpc::core::min(result.bit_size, left.bit_size + right.bit_size);
+        hmpc::core::bit_array<intermediate_size, limb_type, result.signedness> intermediate_storage;
         auto intermediate = intermediate_storage.span();
 
         // left = a_{n-1} a_{n-2} ... a_1 a_0
@@ -47,12 +50,12 @@ namespace hmpc::core::num
 
         // Implies: left * right <= 2^{n * limb_bit_size + m * limb_bit_size} - 2^{n * limb_bit_size} - 2^{m * limb_bit_size} + 1
 
-        constexpr hmpc::size right_overlap = std::min(intermediate.limb_size, right.limb_size);
-        hmpc::iter::for_range<right_overlap>([&](auto i)
+        constexpr auto right_overlap = hmpc::core::min(intermediate.limb_size, right.limb_size);
+        hmpc::iter::for_each(hmpc::range(right_overlap), [&](auto i)
         {
             static_assert(intermediate.limb_size >= i);
-            constexpr hmpc::size left_overlap = std::min(intermediate.limb_size - i, left.limb_size);
-            auto carry = hmpc::iter::scan_range<left_overlap>([&](auto j, auto carry)
+            constexpr auto left_overlap = hmpc::core::min(hmpc::iter::prev(intermediate.limb_size, i), left.limb_size);
+            auto carry = hmpc::iter::scan(hmpc::range(left_overlap), [&](auto j, auto carry)
             {
                 auto left_value = left.read(j);
                 auto right_value = right.read(i);
@@ -90,11 +93,11 @@ namespace hmpc::core::num
             }
         });
 
-        hmpc::iter::for_range<intermediate.limb_size>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(intermediate.limb_size), [&](auto i)
         {
             result.write(i, intermediate.read(i));
         });
-        hmpc::iter::for_range<intermediate.limb_size, result.limb_size>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(intermediate.limb_size, result.limb_size), [&](auto i)
         {
             result.write(i, {}, hmpc::access::unnormal);
         });

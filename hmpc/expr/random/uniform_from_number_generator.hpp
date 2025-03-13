@@ -19,7 +19,7 @@ namespace hmpc::expr::random
         using engine_type = Engine;
         using generator_type = number_generator_expression<engine_type>;
 
-        static constexpr hmpc::size arity = 0;
+        static constexpr auto arity = hmpc::size_constant_of<0>;
 
         shape_type HMPC_PRIVATE_MEMBER(shape);
         generator_type number_generator;
@@ -64,7 +64,7 @@ namespace hmpc::expr::random
         using engine_type = Engine;
         using generator_type = number_generator_expression<engine_type>;
 
-        static constexpr hmpc::size arity = 0;
+        static constexpr auto arity = hmpc::size_constant_of<0>;
 
         shape_type HMPC_PRIVATE_MEMBER(shape);
         generator_type number_generator;

@@ -80,7 +80,7 @@ namespace hmpc::core
         auto extended_left = extended_limb_type{LEFT}; \
         auto extended_right = extended_limb_type{RIGHT}; \
         auto extended_result = extended_left * extended_right; \
-        return multiply_result{limb_type{extended_result}, limb_type{extended_result >> hmpc::size_constant_of<limb_traits::bit_size>}}; \
+        return multiply_result{limb_type{extended_result}, limb_type{extended_result >> limb_traits::bit_size}}; \
     } \
     else \
     { \

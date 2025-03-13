@@ -32,7 +32,7 @@
         using left_shape_type = left_type::shape_type; \
         using right_shape_type = right_type::shape_type; \
 \
-        static constexpr hmpc::size arity = 2; \
+        static constexpr auto arity = hmpc::size_constant_of<2>; \
 \
         left_type left; \
         right_type right; \
@@ -65,7 +65,7 @@
             } \
             else \
             { \
-                return hmpc::iter::scan_range<left_shape_type::rank>([](auto i, auto pattern) \
+                return hmpc::iter::scan(hmpc::range(left_shape_type::rank), [](auto i, auto pattern) \
                 { \
                     constexpr auto extent = left_shape_type::extent(i); \
                     if constexpr (extent == hmpc::placeholder_extent and right_shape_type::extent(i) != extent) \
@@ -92,7 +92,7 @@
             } \
             else \
             { \
-                return hmpc::iter::scan_range<right_shape_type::rank>([](auto i, auto pattern) \
+                return hmpc::iter::scan(hmpc::range(right_shape_type::rank), [](auto i, auto pattern) \
                 { \
                     constexpr auto extent = right_shape_type::extent(i); \
                     if constexpr (extent == hmpc::placeholder_extent and left_shape_type::extent(i) != extent) \

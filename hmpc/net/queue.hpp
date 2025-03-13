@@ -172,13 +172,13 @@ namespace hmpc::net
             static_assert(sizeof...(Senders) == sizeof...(shapes));
             static_assert(sizeof...(Ts) == sizeof...(shapes));
 
-            constexpr hmpc::size count = sizeof...(Senders);
+            constexpr auto count = hmpc::size_constant_of<sizeof...(Senders)>;
 
             auto result = std::make_tuple(
                 make_one_result<Ts>(shapes)...
             );
 
-            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
+            auto metadata = hmpc::iter::unpack(hmpc::range(count), [&](auto... i)
             {
                 return std::array
                 {
@@ -320,20 +320,20 @@ namespace hmpc::net
             static_assert(sizeof...(Receivers) == sizeof...(shapes));
             static_assert(sizeof...(Ts) == sizeof...(shapes));
 
-            constexpr hmpc::size count = sizeof...(Ts);
+            constexpr auto count = hmpc::size_constant_of<sizeof...(Ts)>;
 
             auto result = make_empty_multi_result_storage<Ts...>(communicator, shapes...);
 
-            auto extended_receivers = hmpc::iter::scan_range<count>([&](auto i, auto parties)
+            auto extended_receivers = hmpc::iter::scan(hmpc::range(count), [&](auto i, auto parties)
             {
-                constexpr hmpc::size fields = hmpc::typing::traits::structure_fields_v<std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>>;
-                return hmpc::iter::scan_range<fields>([&](auto, auto parties)
+                constexpr auto fields = hmpc::typing::traits::structure_fields<std::tuple_element_t<0, std::tuple_element_t<i, decltype(result)>>>{};
+                return hmpc::iter::scan(hmpc::range(fields), [&](auto, auto parties)
                 {
                     return parties.append(receivers.get(i));
                 }, parties);
             }, hmpc::net::communicator_for<>);
 
-            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
+            auto metadata = hmpc::iter::unpack(hmpc::range(count), [&](auto... i)
             {
                 return hmpc::iter::collect_enumerated([&]<typename Tensor>(auto j, Tensor&& tensor)
                 {
@@ -375,11 +375,11 @@ namespace hmpc::net
             static_assert(sizeof...(Receivers) == sizeof...(Tensors));
 
             using tensor_types = std::tuple<Tensors...>;
-            constexpr hmpc::size count = sizeof...(Tensors);
-            auto extended_receivers = hmpc::iter::scan_range<count>([&](auto i, auto parties)
+            constexpr auto count = hmpc::size_constant_of<sizeof...(Tensors)>;
+            auto extended_receivers = hmpc::iter::scan(hmpc::range(count), [&](auto i, auto parties)
             {
-                constexpr hmpc::size fields = hmpc::typing::traits::structure_fields_v<std::tuple_element_t<i, tensor_types>>;
-                return hmpc::iter::scan_range<fields>([&](auto, auto parties)
+                constexpr auto fields = hmpc::typing::traits::structure_fields<std::tuple_element_t<i, tensor_types>>{};
+                return hmpc::iter::scan(hmpc::range(fields), [&](auto, auto parties)
                 {
                     return parties.append(receivers.get(i));
                 }, parties);
@@ -621,11 +621,11 @@ namespace hmpc::net
             requires (not ((Senders == Id) or ...))
         auto all_gather(communicator<Senders...> senders, communicator<Receivers...> receivers, auto const&... shapes)
         {
-            constexpr hmpc::size count = sizeof...(Ts);
+            constexpr auto count = hmpc::size_constant_of<sizeof...(Ts)>;
 
             auto result = make_empty_multi_result_storage<Ts...>(senders, shapes...);
 
-            auto metadata = hmpc::iter::for_packed_range<count>([&](auto... i)
+            auto metadata = hmpc::iter::unpack(hmpc::range(count), [&](auto... i)
             {
                 return hmpc::iter::collect([&]<typename Tensor>(Tensor&& tensor)
                 {

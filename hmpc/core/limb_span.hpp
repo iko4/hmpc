@@ -53,8 +53,8 @@ namespace hmpc::core
         using pointer_type = hmpc::access::traits::pointer_t<limb_type, access_type>;
         using reference_type = hmpc::access::traits::reference_t<limb_type, access_type>;
 
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size limb_size = Size;
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto limb_size = hmpc::size_constant_of<Size>;
 
         pointer_type data;
 

@@ -3,7 +3,7 @@
 #include <hmpc/constant.hpp>
 #include <hmpc/core/bit_span.hpp>
 #include <hmpc/core/num/bit_width.hpp>
-#include <hmpc/iter/for_packed_range.hpp>
+#include <hmpc/iter/unpack_range.hpp>
 
 namespace hmpc::core
 {
@@ -15,17 +15,17 @@ namespace hmpc::core
         using normal_type = hmpc::access::normal_tag;
 
         static constexpr hmpc::signedness signedness = hmpc::without_sign;
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size limb_size = sizeof...(Limbs);
-        static constexpr hmpc::size bit_size = hmpc::iter::for_packed_range<limb_size>([](auto... i)
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto limb_size = hmpc::size_constant_of<sizeof...(Limbs)>;
+        static constexpr auto bit_size = hmpc::iter::unpack(hmpc::range(limb_size), [](auto... i)
         {
             if constexpr (limb_size == 0)
             {
-                return 0;
+                return hmpc::constants::zero;
             }
             else
             {
-                return (((i == limb_size - 1) ? hmpc::core::bit_width(Limbs) : limb_bit_size) + ...);
+                return hmpc::size_constant_of<(((i == limb_size - 1) ? hmpc::core::bit_width(Limbs) : limb_bit_size) + ...)>;
             }
         });
 
@@ -86,9 +86,9 @@ namespace hmpc::core
 
         static_assert(hmpc::core::cast<bool>(hmpc::core::bit_not(Span.sign())));
 
-        constexpr auto bit_size = hmpc::core::num::bit_width(Span);
+        constexpr auto bit_size = hmpc::size_constant_of<hmpc::core::num::bit_width(Span)>;
         constexpr auto limb_size = hmpc::core::limb_size_for<limb_type>(bit_size);
-        return hmpc::iter::for_packed_range<limb_size>([](auto... i)
+        return hmpc::iter::unpack(hmpc::range(limb_size), [](auto... i)
         {
             return constant_bit_span{[&]()
             {

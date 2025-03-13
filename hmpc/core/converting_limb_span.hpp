@@ -3,6 +3,8 @@
 #include <hmpc/core/bit_span.hpp>
 #include <hmpc/core/shift_left.hpp>
 #include <hmpc/core/shift_right.hpp>
+#include <hmpc/iter/next.hpp>
+#include <hmpc/iter/stride.hpp>
 
 namespace hmpc::core
 {
@@ -19,15 +21,13 @@ namespace hmpc::core
 
         using access_type = inner_type::access_type;
 
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size inner_limb_bit_size = inner_type::limb_bit_size;
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto inner_limb_bit_size = inner_type::limb_bit_size;
 
         static_assert(limb_bit_size == inner_limb_bit_size);
 
-        static constexpr hmpc::size ratio = 1;
-
-        static constexpr hmpc::size inner_limb_size = inner_type::limb_size;
-        static constexpr hmpc::size limb_size = inner_limb_size;
+        static constexpr auto inner_limb_size = inner_type::limb_size;
+        static constexpr auto limb_size = inner_limb_size;
 
         inner_type inner;
 
@@ -67,16 +67,16 @@ namespace hmpc::core
 
         using access_type = inner_type::access_type;
 
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size inner_limb_bit_size = inner_type::limb_bit_size;
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto inner_limb_bit_size = inner_type::limb_bit_size;
 
         static_assert(limb_bit_size > inner_limb_bit_size);
         static_assert(limb_bit_size % inner_limb_bit_size == 0);
 
-        static constexpr hmpc::size ratio = limb_bit_size / inner_limb_bit_size;
+        static constexpr auto ratio = hmpc::size_constant_of<limb_bit_size / inner_limb_bit_size>;
 
-        static constexpr hmpc::size inner_limb_size = inner_type::limb_size;
-        static constexpr hmpc::size limb_size = hmpc::core::limb_size_for<limb_type>(inner_limb_size * inner_limb_bit_size);
+        static constexpr auto inner_limb_size = inner_type::limb_size;
+        static constexpr auto limb_size = hmpc::core::limb_size_for<limb_type>(hmpc::iter::stride(inner_limb_size, inner_limb_bit_size));
 
         inner_type inner;
 
@@ -87,10 +87,10 @@ namespace hmpc::core
             static_assert(index >= 0);
             if constexpr (index < limb_size)
             {
-                constexpr hmpc::size begin_index = index * ratio;
-                constexpr hmpc::size end_index = inner_limb_size;
+                constexpr auto begin_index = hmpc::iter::stride(index, ratio);
+                constexpr auto end_index = inner_limb_size;
 
-                return hmpc::iter::scan_range<begin_index, end_index>([&](auto i, auto value)
+                return hmpc::iter::scan(hmpc::range(begin_index, end_index), [&](auto i, auto value)
                 {
                     return hmpc::core::bit_or(
                         hmpc::core::cast<limb_type>(inner.extended_read(i)),
@@ -111,10 +111,10 @@ namespace hmpc::core
             static_assert(index >= 0);
             static_assert(index < limb_size);
 
-            constexpr hmpc::size begin_index = index * ratio;
-            constexpr hmpc::size full_end_index = begin_index + ratio;
+            constexpr auto begin_index = hmpc::iter::stride(index, ratio);
+            constexpr auto full_end_index = hmpc::iter::next(begin_index, ratio);
 
-            constexpr hmpc::size end_index = [&]()
+            constexpr auto end_index = [&]()
             {
                 if constexpr (full_end_index < inner_limb_size)
                 {
@@ -126,7 +126,7 @@ namespace hmpc::core
                 }
             }();
 
-            hmpc::iter::scan_range<begin_index, end_index>([&](auto i, auto value)
+            hmpc::iter::scan(hmpc::range(begin_index, end_index), [&](auto i, auto value)
             {
                 inner.write(i, hmpc::core::cast<inner_limb_type>(value));
 

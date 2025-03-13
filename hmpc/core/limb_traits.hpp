@@ -17,7 +17,7 @@ namespace hmpc::core
         static constexpr auto all_zeros = zero;
         static constexpr auto all_ones = max;
 
-        static constexpr hmpc::size bit_size = type::bit_size;
+        static constexpr auto bit_size = type::bit_size;
 
         static constexpr type value_from(hmpc::bit bit) HMPC_NOEXCEPT
         {
@@ -57,11 +57,13 @@ namespace hmpc::core
         using type = hmpc::size;
         static constexpr hmpc::constant<type, type{}> zero = {};
         static constexpr hmpc::constant<type, type{1}> one = {};
+        static constexpr hmpc::constant<type, std::numeric_limits<type>::min()> min = {};
+        static constexpr hmpc::constant<type, std::numeric_limits<type>::max()> max = {};
 
         static constexpr auto all_zeros = zero;
         static constexpr hmpc::constant<type, -type{1}> all_ones = {};
 
-        static constexpr hmpc::size bit_size = std::numeric_limits<type>::digits;
+        static constexpr auto bit_size = hmpc::size_constant_of<std::numeric_limits<type>::digits>;
 
         static constexpr type value_from(hmpc::bit bit) HMPC_NOEXCEPT
         {

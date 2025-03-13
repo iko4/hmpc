@@ -1,7 +1,8 @@
 #pragma once
 
 #include <hmpc/detail/constant_list.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
+#include <hmpc/iter/prev.hpp>
 #include <hmpc/iter/scan_range.hpp>
 #include <hmpc/iter/scan_reverse_range.hpp>
 #include <hmpc/shape.hpp>
@@ -47,7 +48,7 @@ namespace hmpc
         {
             static_assert(Index::rank == Shape::rank);
 
-            return hmpc::iter::scan_range<shape.rank>([&](auto i, auto linear_index)
+            return hmpc::iter::scan(hmpc::range(shape.rank), [&](auto i, auto linear_index)
             {
                 if constexpr (shape.extent(i) == hmpc::placeholder_extent)
                 {
@@ -91,7 +92,7 @@ namespace hmpc
         else
         {
             index_type index; // TODO: implement version for constant `size` parameter
-            hmpc::iter::scan_reverse_range<Shape::rank>([&](auto i, auto size)
+            hmpc::iter::scan_reverse(hmpc::range(Shape::rank), [&](auto i, auto size)
             {
                 if constexpr (shape.extent(i) == hmpc::placeholder_extent)
                 {
@@ -111,13 +112,13 @@ namespace hmpc
     constexpr auto unsqueeze(index<Extents...> const& value, Dim dim, hmpc::force_tag) noexcept
     {
         using index_type = index<Extents...>;
-        constexpr hmpc::size rank = index_type::rank;
-        constexpr hmpc::size pos = [&]()
+        constexpr auto rank = index_type::rank;
+        constexpr auto pos = [&]()
         {
             if constexpr (dim < 0)
             {
                 static_assert(-dim <= rank);
-                return rank + dim;
+                return hmpc::iter::next(rank, dim);
             }
             else
             {
@@ -129,9 +130,9 @@ namespace hmpc
         static_assert(0 <= pos);
         static_assert(pos < rank);
 
-        return hmpc::iter::for_packed_range<pos>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(pos), [&](auto... i)
         {
-            return hmpc::iter::for_packed_range<pos + 1, rank>([&](auto... j)
+            return hmpc::iter::unpack(hmpc::range(hmpc::iter::next(pos), rank), [&](auto... j)
             {
                 return index{value.get(i)..., value.get(j)...};
             });
@@ -142,13 +143,23 @@ namespace hmpc
     constexpr auto unsqueeze_for_element_index(index<Extents...> const& value, Dim dim, hmpc::force_tag) noexcept
     {
         using index_type = index<Extents...>;
-        constexpr hmpc::size rank = index_type::rank - (hmpc::vector<T> ? 1 : 0);
-        constexpr hmpc::size pos = [&]()
+        constexpr auto rank = []()
+        {
+            if constexpr (hmpc::vector<T>)
+            {
+                return hmpc::iter::prev(index_type::rank);
+            }
+            else
+            {
+                return index_type::rank;
+            }
+        }();
+        constexpr auto pos = [&]()
         {
             if constexpr (dim < 0)
             {
                 static_assert(-dim <= rank);
-                return rank + dim;
+                return hmpc::iter::next(rank, dim);
             }
             else
             {
@@ -160,9 +171,9 @@ namespace hmpc
         static_assert(0 <= pos);
         static_assert(pos < rank);
 
-        return hmpc::iter::for_packed_range<pos>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(pos), [&](auto... i)
         {
-            return hmpc::iter::for_packed_range<pos + 1, rank>([&](auto... j)
+            return hmpc::iter::unpack(hmpc::range(hmpc::iter::next(pos), rank), [&](auto... j)
             {
                 if constexpr (hmpc::vector<T>)
                 {

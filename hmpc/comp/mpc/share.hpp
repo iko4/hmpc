@@ -15,7 +15,7 @@ namespace hmpc::comp::mpc
     {
         using is_structure = void;
         using is_collective_structure = void;
-        static constexpr hmpc::size size = sizeof...(Parties);
+        static constexpr auto size = hmpc::size_constant_of<sizeof...(Parties)>;
         static constexpr auto communicator = hmpc::net::communicator_for<Parties...>;
 
         T values[size];
@@ -68,8 +68,8 @@ namespace hmpc::comp::mpc
 
         using is_structure = void;
         using is_collective_structure_element = void;
-        static constexpr hmpc::size size = 1;
-        static constexpr hmpc::size owner_size = sizeof...(Parties);
+        static constexpr auto size = hmpc::size_constant_of<1>;
+        static constexpr auto owner_size = hmpc::size_constant_of<sizeof...(Parties)>;
         static constexpr auto id = hmpc::party_constant_of<Id>;
         static constexpr auto communicator = hmpc::net::communicator_for<Parties...>;
 

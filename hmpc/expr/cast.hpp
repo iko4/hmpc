@@ -15,7 +15,7 @@ namespace hmpc::expr
         using shape_type = inner_type::shape_type;
         using element_shape_type = hmpc::traits::element_shape_t<value_type, shape_type>;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
 
         inner_type inner;
 

@@ -2,7 +2,7 @@
 
 #include <hmpc/core/bit_and.hpp>
 #include <hmpc/core/limb_span.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
 
 namespace hmpc::core::num
 {
@@ -10,7 +10,7 @@ namespace hmpc::core::num
         requires (hmpc::same_limb_types<Result, Left, Right>)
     constexpr void bit_and(Result result, Left left, Right right) HMPC_NOEXCEPT
     {
-        hmpc::iter::for_range<result.limb_size>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(result.limb_size), [&](auto i)
         {
             result.write(i, hmpc::core::bit_and(left.extended_read(i), right.extended_read(i)));
         });

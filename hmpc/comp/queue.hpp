@@ -34,7 +34,7 @@ namespace hmpc::comp
         constexpr auto call_packed(auto const& f, hmpc::expression_tuple auto e)
         {
             using expression_type = decltype(e);
-            return hmpc::iter::for_packed_range<expression_type::arity>([&](auto... i)
+            return hmpc::iter::unpack(hmpc::range(expression_type::arity), [&](auto... i)
             {
                 return f(e.get(i)...);
             });
@@ -60,7 +60,7 @@ namespace hmpc::comp
             return call_packed(
                 [&](auto... args)
                 {
-                    return hmpc::iter::for_packed_range<expression_type::arity>([&](auto... i)
+                    return hmpc::iter::unpack(hmpc::range(expression_type::arity), [&](auto... i)
                     {
                         return f(e.get(i)..., args...);
                     });
@@ -258,7 +258,7 @@ namespace hmpc::comp
             if constexpr (hmpc::expression_with_capabilities<E>)
             {
                 using capabilities_type = E::capabilities;
-                return hmpc::iter::scan_range<capabilities_type::size>([&](auto i, auto&& capabilities) -> decltype(auto)
+                return hmpc::iter::scan(hmpc::range(capabilities_type::size), [&](auto i, auto&& capabilities) -> decltype(auto)
                 {
                     return std::forward<decltype(capabilities)>(capabilities).insert(capabilities_type::get(i));
                 }, std::forward<decltype(capabilities)>(capabilities));
@@ -278,7 +278,7 @@ namespace hmpc::comp
             }
             else if constexpr (expr.arity > 0)
             {
-                return hmpc::iter::scan_range<expr.arity>([&](auto i, auto&& capabilities) -> decltype(auto)
+                return hmpc::iter::scan(hmpc::range(expr.arity), [&](auto i, auto&& capabilities) -> decltype(auto)
                 {
                     return collect_capabilities(std::forward<decltype(capabilities)>(capabilities), cache, expr.get(i));
                 }, add_capabilities(std::forward<decltype(capabilities)>(capabilities), expr));
@@ -298,7 +298,7 @@ namespace hmpc::comp
             }
             else if constexpr (expr.arity > 0)
             {
-                return hmpc::iter::for_packed_range<expr.arity>([&](auto... i)
+                return hmpc::iter::unpack(hmpc::range(expr.arity), [&](auto... i)
                 {
                     return hmpc::expr::make_state(state(cache, tensors, expr.get(i), handler)...);
                 });
@@ -317,7 +317,7 @@ namespace hmpc::comp
             {
                 if constexpr (expr.arity > 0)
                 {
-                    return hmpc::iter::for_packed_range<expr.arity>([&](auto... i)
+                    return hmpc::iter::unpack(hmpc::range(expr.arity), [&](auto... i)
                     {
                         return hmpc::expr::make_state(state(cache, tensors, expr.get(i), handler)...);
                     });
@@ -334,7 +334,7 @@ namespace hmpc::comp
                 {
                     if constexpr (expr.arity > 0)
                     {
-                        return hmpc::iter::scan_range<expr.arity>([&](auto i, auto&& capabilities) -> decltype(auto)
+                        return hmpc::iter::scan(hmpc::range(expr.arity), [&](auto i, auto&& capabilities) -> decltype(auto)
                         {
                             return collect_capabilities(std::forward<decltype(capabilities)>(capabilities), cache, expr.get(i));
                         }, add_capabilities(hmpc::detail::type_set{}, expr));
@@ -345,14 +345,14 @@ namespace hmpc::comp
                     }
                 }();
 
-                return hmpc::iter::scan_range<capabilities.size>([&](auto i, auto&& data) -> decltype(auto)
+                return hmpc::iter::scan(hmpc::range(capabilities.size), [&](auto i, auto&& data) -> decltype(auto)
                 {
                     return add_capability_data(std::forward<decltype(data)>(data), capabilities.get(i), shape);
                 }, hmpc::detail::type_map{});
             };
             auto make_capabilities = []<typename Data>(Data const& data, auto const& index, auto const& shape)
             {
-                return hmpc::iter::for_packed_range<Data::size>([&](auto... i)
+                return hmpc::iter::unpack(hmpc::range(Data::size), [&](auto... i)
                 {
                     return capabilities_type<typename decltype(data.key(i))::type...>(data, index, shape);
                 });
@@ -426,7 +426,7 @@ namespace hmpc::comp
 
             static_assert(cache_type::size >= sizeof...(Exprs));
 
-            auto tensors = hmpc::iter::for_packed_range<cache.size>([&](auto... i)
+            auto tensors = hmpc::iter::unpack(hmpc::range(cache.size), [&](auto... i)
             {
                 return std::make_tuple([&]()
                 {
@@ -444,7 +444,7 @@ namespace hmpc::comp
             };
             static constexpr auto expression_tuple_indices_of = []<hmpc::expression_tuple E>(hmpc::detail::type_tag<E> e)
             {
-                return hmpc::iter::for_packed_range<E::arity>([&](auto... i)
+                return hmpc::iter::unpack(hmpc::range(E::arity), [&](auto... i)
                 {
                     return hmpc::core::mdsize{
                         expression_index_of(
@@ -454,7 +454,7 @@ namespace hmpc::comp
                 });
             };
 
-            constexpr auto expression_count = sizeof...(Exprs);
+            constexpr auto expression_count = hmpc::size_constant_of<sizeof...(Exprs)>;
             constexpr auto result_tensor_indices = std::make_tuple(
                 []()
                 {
@@ -469,16 +469,9 @@ namespace hmpc::comp
                 }()...
             );
 
-            // TODO: How do we want to check this for mixed (tuple and non-tuple) inputs?
-            // hmpc::iter::for_range<expression_count>([&](auto i)
-            // {
-            //     hmpc::iter::for_range<i + 1, expression_count>([&](auto j)
-            //     {
-            //         static_assert(std::get<i>(result_tensor_indices) != std::get<j>(result_tensor_indices));
-            //     });
-            // });
+            // TODO: How do we want to check that indices are only used once for mixed (tuple and non-tuple) inputs?
 
-            hmpc::iter::for_range<cache.size>([&](auto i)
+            hmpc::iter::for_each(hmpc::range(cache.size), [&](auto i)
             {
                 execute_single(cache, tensors, cache.get(i));
             });
@@ -488,7 +481,7 @@ namespace hmpc::comp
                 if constexpr (hmpc::expression_tuple<E>)
                 {
                     static_assert(decltype(index)::rank == E::arity);
-                    return hmpc::iter::for_packed_range<E::arity>([&](auto... i)
+                    return hmpc::iter::unpack(hmpc::range(E::arity), [&](auto... i)
                     {
                         return E::owned_from_parts(std::move(std::get<index.get(i)>(tensors))...);
                     });
@@ -507,7 +500,7 @@ namespace hmpc::comp
             }
             else
             {
-                return hmpc::iter::for_packed_range<expression_count>([&](auto... i)
+                return hmpc::iter::unpack(hmpc::range(expression_count), [&](auto... i)
                 {
                     return std::make_tuple(
                         to_result(hmpc::detail::tag_of<Exprs>, std::get<i>(result_tensor_indices))...

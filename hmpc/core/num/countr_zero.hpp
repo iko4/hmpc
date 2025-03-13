@@ -16,7 +16,7 @@ namespace hmpc::core::num
     template<hmpc::unsigned_read_only_bit_span Value>
     constexpr hmpc::size countr_zero(Value value) HMPC_NOEXCEPT
     {
-        return hmpc::core::min(hmpc::iter::scan_range<value.limb_size>([&](auto i, auto previous)
+        return hmpc::core::min(hmpc::iter::scan(hmpc::range(value.limb_size), [&](auto i, auto previous)
         {
             auto count = hmpc::core::countr_zero(value.read(i));
             auto previously_undetermined = hmpc::core::cast<hmpc::bit>(

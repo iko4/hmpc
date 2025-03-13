@@ -18,7 +18,7 @@ namespace hmpc::expr::random
         using shape_type = hmpc::shape<Dimensions...>;
         using element_shape_type = hmpc::traits::element_shape_t<value_type, shape_type>;
 
-        static constexpr hmpc::size arity = 0;
+        static constexpr auto arity = hmpc::size_constant_of<0>;
 
         using capabilities = hmpc::detail::type_list<hmpc::expr::capabilities::random_number_generator_tag>;
 
@@ -62,7 +62,7 @@ namespace hmpc::expr::random
         using shape_type = hmpc::shape<Dimensions...>;
         using element_shape_type = hmpc::traits::element_shape_t<value_type, shape_type>;
 
-        static constexpr hmpc::size arity = 0;
+        static constexpr auto arity = hmpc::size_constant_of<0>;
 
         using capabilities = hmpc::detail::type_list<hmpc::expr::capabilities::random_number_generator_tag>;
 

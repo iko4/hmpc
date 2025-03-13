@@ -114,7 +114,7 @@ namespace hmpc::net
         {
             auto make_accessors_for_parties = [&](auto j)
             {
-                return hmpc::iter::for_packed_range<communicator.size>([&](auto... i)
+                return hmpc::iter::unpack(hmpc::range(communicator.size), [&](auto... i)
                 {
                     return std::make_tuple(
                         make_accessor(
@@ -126,7 +126,8 @@ namespace hmpc::net
                 });
             };
 
-            return hmpc::iter::for_packed_range<hmpc::typing::traits::structure_fields_v<first_element>>([&](auto... j)
+            constexpr auto fields = hmpc::typing::traits::structure_fields<first_element>{};
+            return hmpc::iter::unpack(hmpc::range(fields), [&](auto... j)
             {
                 return std::make_tuple(
                     make_accessors_for_parties(j)...
@@ -135,7 +136,7 @@ namespace hmpc::net
         }
         else
         {
-            return hmpc::iter::for_packed_range<communicator.size>([&](auto... i)
+            return hmpc::iter::unpack(hmpc::range(communicator.size), [&](auto... i)
             {
                 return std::make_tuple(
                     make_accessor(
@@ -151,10 +152,10 @@ namespace hmpc::net
     template<typename T, party_id Id, party_id... Parties>
     auto make_multi_accessors(hmpc::party_constant<Id> id, communicator<Parties...> communicator, T& values)
     {
-        constexpr auto size = std::tuple_size_v<T>;
-        if constexpr (hmpc::iter::for_packed_range<size>([](auto... i) { return (hmpc::structure<std::tuple_element_t<0, std::tuple_element_t<i, T>>> or ...); })) // some part is a structure
+        constexpr auto size = std::tuple_size<T>{};
+        if constexpr (hmpc::iter::unpack(hmpc::range(size), [](auto... i) { return (hmpc::structure<std::tuple_element_t<0, std::tuple_element_t<i, T>>> or ...); })) // some part is a structure
         {
-            constexpr auto field_elements = hmpc::iter::for_packed_range<size>([](auto... i)
+            constexpr auto field_elements = hmpc::iter::unpack(hmpc::range(size), [](auto... i)
             {
                 return (hmpc::typing::traits::structure_fields_v<std::tuple_element_t<0, std::tuple_element_t<i, T>>> + ...);
             });
@@ -171,7 +172,7 @@ namespace hmpc::net
                     }
                     else
                     {
-                        return hmpc::iter::for_packed_range<communicator.size>([&](auto... i)
+                        return hmpc::iter::unpack(hmpc::range(communicator.size), [&](auto... i)
                         {
                             return std::make_tuple(
                                 make_accessor(
@@ -197,7 +198,7 @@ namespace hmpc::net
                 }
             };
 
-            return hmpc::iter::for_packed_range<field_elements>([&](auto... j)
+            return hmpc::iter::unpack(hmpc::range(field_elements), [&](auto... j)
             {
                 return std::make_tuple(
                     make_accessors_for_parties(j, hmpc::constants::zero)...
@@ -206,7 +207,7 @@ namespace hmpc::net
         }
         else
         {
-            return hmpc::iter::for_packed_range<size>([&](auto... i)
+            return hmpc::iter::unpack(hmpc::range(size), [&](auto... i)
             {
                 return std::make_tuple(
                     make_accessors(id, communicator, std::get<i>(values))...
@@ -262,7 +263,7 @@ namespace hmpc::net
     auto make_data_ptrs(communicator<Parties...> communicator, Accessors& accessors)
     {
         static_assert(std::tuple_size_v<Accessors> == communicator.size);
-        return hmpc::iter::for_packed_range<communicator.size>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(communicator.size), [&](auto... i)
         {
             return std::array<hmpc::net::data_ptr, communicator.size>
             {
@@ -274,8 +275,8 @@ namespace hmpc::net
     template<typename Accessors, party_id... Parties>
     auto make_multi_data_ptrs(communicator<Parties...> communicator, Accessors& accessors)
     {
-        constexpr auto size = std::tuple_size_v<Accessors>;
-        return hmpc::iter::for_packed_range<size>([&](auto... i)
+        constexpr auto size = std::tuple_size<Accessors>{};
+        return hmpc::iter::unpack(hmpc::range(size), [&](auto... i)
         {
             return std::array<std::array<hmpc::net::data_ptr, communicator.size>, size>
             {

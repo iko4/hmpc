@@ -11,8 +11,9 @@ namespace hmpc
         {
         };
 
-        template<typename T, T V>
-        struct is_constant<constant<T, V>> : std::true_type
+        template<typename T>
+        requires (requires { constant<typename T::value_type, T::value>{}; })
+        struct is_constant<T> : std::true_type
         {
         };
 
@@ -30,10 +31,11 @@ namespace hmpc
             using type = T;
         };
 
-        template<typename T, T V>
-        struct remove_constant<constant<T, V>>
+        template<typename T>
+        requires (requires { constant<typename T::value_type, T::value>{}; })
+        struct remove_constant<T>
         {
-            using type = T;
+            using type = T::value_type;
         };
 
         template<typename T>
@@ -45,15 +47,14 @@ namespace hmpc
         using remove_constant_t = remove_constant<T>::type;
 
         template<typename T, auto Default>
-        struct value_or
+        struct value_or : constant<decltype(Default), Default>
         {
-            static constexpr auto value = Default;
         };
 
-        template<typename T, T V, auto Default>
-        struct value_or<constant<T, V>, Default>
+        template<typename T, auto Default>
+        requires (requires { constant<typename T::value_type, T::value>{}; })
+        struct value_or<T, Default> : constant<typename T::value_type, T::value>
         {
-            static constexpr auto value = V;
         };
 
         template<typename T, auto Default>

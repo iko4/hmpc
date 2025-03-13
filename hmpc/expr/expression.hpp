@@ -61,7 +61,7 @@ namespace hmpc::expr
     namespace detail
     {
         template<typename Shape, hmpc::expression E>
-        struct same_element_shape : std::bool_constant<hmpc::iter::for_packed_range<E::arity>([](auto... i)
+        struct same_element_shape : std::bool_constant<hmpc::iter::unpack(hmpc::range(E::arity), [](auto... i)
         {
             if constexpr (E::arity > 0)
             {
@@ -82,7 +82,7 @@ namespace hmpc::expr
     template<typename... States>
     struct multi_state : public hmpc::detail::tuple<States...>
     {
-        static constexpr hmpc::size arity = sizeof...(States);
+        static constexpr auto arity = hmpc::size_constant_of<sizeof...(States)>;
     };
 
     template<typename... States>

@@ -1,4 +1,5 @@
 add_executable(host-tests
+    range.cpp
     signedness.cpp
     detail/utility.cpp
     detail/type_id.cpp

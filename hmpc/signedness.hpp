@@ -1,5 +1,8 @@
 #pragma once
 
+#include <hmpc/core/bit_or.hpp>
+#include <hmpc/core/cast.hpp>
+
 namespace hmpc
 {
     enum class signedness : bool
@@ -22,8 +25,8 @@ namespace hmpc
     }
 
     /// If one of the operands is signed, the result is signed as well.
-    constexpr signedness common_signedness(signedness left, signedness right) noexcept
+    constexpr auto common_signedness(hmpc::maybe_constant_of<signedness> auto left, hmpc::maybe_constant_of<signedness> auto right) noexcept
     {
-        return static_cast<signedness>(static_cast<bool>(left) | static_cast<bool>(right));
+        return hmpc::core::cast<signedness>(hmpc::core::bit_or(hmpc::core::bool_cast(left), hmpc::core::bool_cast(right)));
     }
 }

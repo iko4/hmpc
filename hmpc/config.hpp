@@ -75,6 +75,11 @@ namespace hmpc
     {
         return value;
     }
+    template<typename T>
+    constexpr bool bool_cast(T value) noexcept
+    {
+        return static_cast<bool>(value);
+    }
 
     namespace crypto
     {

@@ -26,7 +26,7 @@ namespace hmpc::detail
     template<typename... Ts>
     struct type_list : public type_list_base<std::make_integer_sequence<hmpc::size, sizeof...(Ts)>, Ts...>
     {
-        static constexpr hmpc::size size = sizeof...(Ts);
+        static constexpr auto size = hmpc::size_constant_of<sizeof...(Ts)>;
 
         template<typename T>
         static constexpr auto append(hmpc::detail::type_tag<T> = {}) noexcept

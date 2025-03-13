@@ -2,7 +2,7 @@
 
 #include <hmpc/core/limb_span.hpp>
 #include <hmpc/core/select.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
 
 namespace hmpc::core::num
 {
@@ -10,7 +10,7 @@ namespace hmpc::core::num
         requires (hmpc::same_limb_types<Result, FalseValue, TrueValue> and hmpc::maybe_constant_of<Choice, hmpc::bit>)
     constexpr void select(Result result, FalseValue false_value, TrueValue true_value, Choice choice) HMPC_NOEXCEPT
     {
-        hmpc::iter::for_range<result.limb_size>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(result.limb_size), [&](auto i)
         {
             result.write(i, hmpc::core::select(false_value.extended_read(i), true_value.extended_read(i), choice));
         });

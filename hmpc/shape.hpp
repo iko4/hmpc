@@ -3,8 +3,9 @@
 #include <hmpc/core/mdsize.hpp>
 #include <hmpc/core/multiply.hpp>
 #include <hmpc/detail/constant_list.hpp>
-#include <hmpc/iter/for_packed_range.hpp>
-#include <hmpc/iter/for_range.hpp>
+#include <hmpc/iter/unpack_range.hpp>
+#include <hmpc/iter/for_each_range.hpp>
+#include <hmpc/iter/next.hpp>
 #include <hmpc/iter/scan_range.hpp>
 #include <hmpc/value.hpp>
 
@@ -27,7 +28,7 @@ namespace hmpc
 
         constexpr auto size() const HMPC_NOEXCEPT
         {
-            return hmpc::iter::scan_range<rank>([&](auto i, auto accumulated)
+            return hmpc::iter::scan(hmpc::range(rank), [&](auto i, auto accumulated)
             {
                 auto extent = this->get(i);
                 if constexpr (hmpc::is_constant<decltype(extent)>)
@@ -58,7 +59,7 @@ namespace hmpc
             else
             {
                 hmpc::size size = 1;
-                hmpc::iter::for_range<rank>([&](auto i)
+                hmpc::iter::for_each(hmpc::range(rank), [&](auto i)
                 {
                     constexpr auto e = hmpc::core::mdsize<Extents...>::extent(i);
                     if constexpr (e != hmpc::dynamic_extent and e != hmpc::placeholder_extent)
@@ -128,7 +129,7 @@ namespace hmpc
         {
             static_assert(left_shape::rank == right_shape::rank);
 
-            return hmpc::iter::for_packed_range<left_shape::rank>([&](auto... i)
+            return hmpc::iter::unpack(hmpc::range(left_shape::rank), [&](auto... i)
             {
                 return shape{common_extent(left.get(i), right.get(i))...};
             });
@@ -139,12 +140,12 @@ namespace hmpc
     constexpr auto unsqueeze(shape<Extents...> const& value, Dim dim = {}, Extent extent = {}) noexcept
     {
         using shape_type = shape<Extents...>;
-        constexpr hmpc::size pos = [&]()
+        constexpr auto pos = [&]()
         {
             if constexpr (dim < 0)
             {
                 static_assert(-dim <= shape_type::rank + 1);
-                return shape_type::rank + 1 + dim;
+                return hmpc::iter::next(hmpc::iter::next(shape_type::rank), dim);
             }
             else
             {
@@ -156,9 +157,9 @@ namespace hmpc
         static_assert(0 <= pos);
         static_assert(pos <= shape_type::rank);
 
-        return hmpc::iter::for_packed_range<pos>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(pos), [&](auto... i)
         {
-            return hmpc::iter::for_packed_range<pos, shape_type::rank>([&](auto... j)
+            return hmpc::iter::unpack(hmpc::range(pos, shape_type::rank), [&](auto... j)
             {
                 return shape{value.get(i)..., extent, value.get(j)...};
             });
@@ -174,13 +175,13 @@ namespace hmpc
     constexpr auto squeeze(shape<Extents...> const& value, Dim dim, force_tag) noexcept
     {
         using shape_type = shape<Extents...>;
-        constexpr hmpc::size rank = shape_type::rank;
-        constexpr hmpc::size pos = [&]()
+        constexpr auto rank = shape_type::rank;
+        constexpr auto pos = [&]()
         {
             if constexpr (dim < 0)
             {
                 static_assert(-dim <= rank);
-                return rank + dim;
+                return hmpc::iter::next(rank, dim);
             }
             else
             {
@@ -192,9 +193,9 @@ namespace hmpc
         static_assert(0 <= pos);
         static_assert(pos < rank);
 
-        return hmpc::iter::for_packed_range<pos>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(pos), [&](auto... i)
         {
-            return hmpc::iter::for_packed_range<pos + 1, rank>([&](auto... j)
+            return hmpc::iter::unpack(hmpc::range(hmpc::iter::next(pos), rank), [&](auto... j)
             {
                 return shape{value.get(i)..., value.get(j)...};
             });
@@ -225,7 +226,7 @@ namespace hmpc
     template<typename T, typename Shape>
     constexpr auto element_shape(Shape const& shape) HMPC_NOEXCEPT
     {
-        return hmpc::iter::for_packed_range<Shape::rank>([&](auto... i) -> traits::element_shape_t<T, Shape>
+        return hmpc::iter::unpack(hmpc::range(Shape::rank), [&](auto... i) -> traits::element_shape_t<T, Shape>
         {
             if constexpr (hmpc::scalar<T>)
             {

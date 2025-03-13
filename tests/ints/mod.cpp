@@ -22,7 +22,7 @@ TEST_CASE("Integers modulo")
     auto one = mod_p(1_int);
     REQUIRE(hmpc::ints::num::equal_to(one, mod_p::reduced_auxiliary_modulus));
 
-    hmpc::iter::for_range<hmpc::size{10}>([&](auto i)
+    hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<10>), [&](auto i)
     {
         REQUIRE(pow(zero, i) == (i == 0 ? one : zero));
         REQUIRE(pow(one, i) == one);

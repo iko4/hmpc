@@ -12,7 +12,7 @@ namespace hmpc::comp::crypto::lhe
         hmpc::comp::tensor<Poly, Dimensions...> w;
 
         using is_structure = void;
-        static constexpr hmpc::size size = 3;
+        static constexpr auto size = hmpc::size_constant_of<3>;
 
         template<typename Self>
         constexpr auto&& get(this Self&& self, hmpc::size_constant<0>)

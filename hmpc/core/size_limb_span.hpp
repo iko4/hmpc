@@ -13,9 +13,9 @@ namespace hmpc::core
         using access_type = Access;
         using normal_type = hmpc::access::unnormal_tag;
 
-        static constexpr hmpc::size bit_size = Bits;
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size limb_size = hmpc::core::limb_size_for<limb_type>(bit_size);
+        static constexpr auto bit_size = hmpc::size_constant_of<Bits>;
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto limb_size = hmpc::core::limb_size_for<limb_type>(bit_size);
 
         hmpc::size value;
 
@@ -26,7 +26,7 @@ namespace hmpc::core
 
         // TODO: consider signed size_type
         static_assert(not std::numeric_limits<hmpc::size>::is_signed);
-        static constexpr hmpc::signedness signedness = hmpc::without_sign;
+        static constexpr auto signedness = hmpc::constants::without_sign;
 
         constexpr auto sign() const noexcept
         {

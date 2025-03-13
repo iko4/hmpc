@@ -14,7 +14,7 @@ namespace hmpc::expr
         using shape_type = hmpc::shape<Dimensions...>;
         using element_shape_type = hmpc::traits::element_shape_t<value_type, shape_type>;
 
-        static constexpr hmpc::size arity = 0;
+        static constexpr auto arity = hmpc::size_constant_of<0>;
 
         hmpc::comp::tensor<value_type, Dimensions...>* tensor;
 

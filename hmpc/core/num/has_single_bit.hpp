@@ -14,7 +14,7 @@ namespace hmpc::core::num
     {
         // TODO: rewrite this by not just counting the single_bit-limbs and comparing the result to one
         return hmpc::core::equal_to(
-            hmpc::iter::scan_range<value.limb_size>([&](auto i, auto previous)
+            hmpc::iter::scan(hmpc::range(value.limb_size), [&](auto i, auto previous)
             {
                 auto single_bit = hmpc::core::has_single_bit(value.read(i, hmpc::access::normal));
                 return hmpc::core::add(previous, hmpc::core::cast<hmpc::size>(single_bit));

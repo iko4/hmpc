@@ -127,7 +127,7 @@ namespace hmpc::core
     {
         using underlying_type = bool;
 
-        static constexpr hmpc::size bit_size = 1;
+        static constexpr auto bit_size = hmpc::size_constant_of<1>;
 
         /// Data member
         underlying_type data;
@@ -283,11 +283,6 @@ namespace hmpc::core
         }
     };
 
-    constexpr bool bool_cast(uint<bool> bit) noexcept
-    {
-        return bit.data;
-    }
-
     template<typename Underlying>
     struct uint
     {
@@ -305,7 +300,7 @@ namespace hmpc::core
         static_assert(std::numeric_limits<underlying_type>::max() == static_cast<underlying_type>(compl underlying_type{}));
         static_assert(std::numeric_limits<underlying_type>::max() == static_cast<underlying_type>(-underlying_type{1}));
 
-        static constexpr hmpc::size bit_size = std::numeric_limits<underlying_type>::digits;
+        static constexpr auto bit_size = hmpc::size_constant_of<std::numeric_limits<underlying_type>::digits>;
 
         /// Data member
         underlying_type data;
@@ -370,7 +365,7 @@ namespace hmpc
 
     constexpr bool bool_cast(bit value) noexcept
     {
-        return hmpc::core::bool_cast(value);
+        return value.data;
     }
 }
 

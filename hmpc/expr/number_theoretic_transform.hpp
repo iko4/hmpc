@@ -1,8 +1,8 @@
 #pragma once
 
 #include <hmpc/comp/queue.hpp>
+#include <hmpc/core/countr_zero.hpp>
 #include <hmpc/detail/type_id.hpp>
-#include <hmpc/detail/utility.hpp>
 #include <hmpc/expr/expression.hpp>
 #include <hmpc/ints/num/theory/root_of_unity.hpp>
 #include <hmpc/ints/poly.hpp>
@@ -15,10 +15,10 @@ namespace hmpc::expr
         using value_type = T;
         using element_type = hmpc::traits::element_type_t<value_type>;
         using limb_type = hmpc::traits::limb_type_t<value_type>;
-        static constexpr hmpc::size vector_size = hmpc::traits::vector_size_v<value_type>;
-        static constexpr hmpc::size iteration_count = hmpc::detail::countr_zero(vector_size);
-        static constexpr hmpc::size limb_size = hmpc::traits::limb_size_v<value_type>;
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
+        static constexpr auto vector_size = hmpc::traits::vector_size<value_type>{};
+        static constexpr auto iteration_count = hmpc::core::countr_zero(vector_size);
+        static constexpr auto limb_size = hmpc::traits::limb_size<value_type>{};
+        static constexpr auto limb_bit_size = limb_type::bit_size;
         static constexpr auto root = []()
         {
             constexpr auto phi = hmpc::ints::num::theory::root_of_unity(hmpc::constant_of<value_type::modulus>, hmpc::size_constant_of<2 * vector_size>);
@@ -90,7 +90,7 @@ namespace hmpc::expr
         static void inner_transform(sycl::queue& sycl_queue, hmpc::comp::tensor<element_type, vector_size, hmpc::dynamic_extent>& scratch_buffer, hmpc::comp::tensor<element_type, vector_size>& roots, hmpc::size element_size)
             requires (Inverse)
         {
-            hmpc::iter::for_range<hmpc::size{1}, iteration_count - 1>([&](auto iteration)
+            hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<1>, hmpc::iter::prev(iteration_count)), [&](auto iteration)
             {
                 sycl_queue.submit([&](auto& handler)
                 {
@@ -144,7 +144,7 @@ namespace hmpc::expr
         static void inner_transform(sycl::queue& sycl_queue, hmpc::comp::tensor<element_type, vector_size, hmpc::dynamic_extent>& scratch_buffer, hmpc::comp::tensor<element_type, vector_size>& roots, hmpc::size element_size)
             requires (not Inverse)
         {
-            hmpc::iter::for_range<hmpc::size{1}, iteration_count - 1>([&](auto iteration)
+            hmpc::iter::for_each(hmpc::range(hmpc::size_constant_of<1>, hmpc::iter::prev(iteration_count)), [&](auto iteration)
             {
                 sycl_queue.submit([&](auto& handler)
                 {
@@ -208,7 +208,7 @@ namespace hmpc::expr
         using limb_type = hmpc::traits::limb_type_t<value_type>;
         using shape_type = inner_type::shape_type;
 
-        static constexpr hmpc::size arity = 1;
+        static constexpr auto arity = hmpc::size_constant_of<1>;
         using is_complex = void;
 
         inner_type inner;
@@ -564,7 +564,7 @@ namespace hmpc::expr
     template<hmpc::expression_tuple E>
     constexpr auto number_theoretic_transform(E e)
     {
-        return hmpc::iter::for_packed_range<E::arity>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(E::arity), [&](auto... i)
         {
             return E::from_parts(number_theoretic_transform(e.get(i))...);
         });
@@ -585,7 +585,7 @@ namespace hmpc::expr
     template<hmpc::expression_tuple E>
     constexpr auto inverse_number_theoretic_transform(E e)
     {
-        return hmpc::iter::for_packed_range<E::arity>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(E::arity), [&](auto... i)
         {
             return E::from_parts(inverse_number_theoretic_transform(e.get(i))...);
         });

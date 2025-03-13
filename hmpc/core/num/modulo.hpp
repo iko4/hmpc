@@ -33,7 +33,7 @@ namespace hmpc::core::num
     {
         using limb_type = Result::limb_type;
         using limb_traits = hmpc::core::limb_traits<limb_type>;
-        constexpr auto r = AuxiliaryPower;
+        constexpr auto r = auxiliary_power;
         constexpr auto p = modulus.limb_size;
         HMPC_DEVICE_ASSERT(hmpc::core::limb_size_for<limb_type>(bit_width(modulus)) == modulus.limb_size);
 
@@ -42,17 +42,17 @@ namespace hmpc::core::num
 
         bit_copy(T_storage.span(hmpc::access::write), value);
 
-        hmpc::iter::for_range<r>([&](auto i)
+        hmpc::iter::for_each(hmpc::range(r), [&](auto i)
         {
             auto m = hmpc::core::multiply(T.read(i), inverse_modulus);
-            auto carry = hmpc::iter::scan_range<p>([&](auto j, auto carry)
+            auto carry = hmpc::iter::scan(hmpc::range(p), [&](auto j, auto carry)
             {
                 constexpr auto k = hmpc::iter::next(i, j);
                 auto [lower, upper] = hmpc::core::extended_multiply_add(m, modulus.read(j), T.read(k), carry);
                 T.write(k, lower);
                 return upper;
             }, hmpc::zero_constant_of<limb_type>);
-            hmpc::iter::scan_range<i + p, T.limb_size>([&](auto k, auto carry)
+            hmpc::iter::scan(hmpc::range(hmpc::iter::next(i, p), T.limb_size), [&](auto k, auto carry)
             {
                 auto [sum, new_carry] = hmpc::core::extended_add(T.read(k), carry);
                 T.write(k, sum);

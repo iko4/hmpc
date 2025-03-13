@@ -44,7 +44,7 @@ namespace hmpc::random
         auto read_result = result.span(hmpc::access::read);
         auto write_result = result.span(hmpc::access::write);
 
-        hmpc::iter::scan_range<Count>([&](auto i, auto current_limb)
+        hmpc::iter::scan(hmpc::range(count), [&](auto i, auto current_limb)
         {
             if constexpr (i == 0)
             {

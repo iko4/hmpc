@@ -15,7 +15,7 @@ struct structured
     Right right;
 
     using is_structure = void;
-    static constexpr hmpc::size size = 2;
+    static constexpr auto size = hmpc::size_constant_of<2>;
 
     template<typename Self>
     constexpr auto&& get(this Self&& self, hmpc::size_constant<0>)

@@ -9,8 +9,8 @@ namespace hmpc::core
     {
         using limb_type = Limb;
 
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size limb_size = Size;
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto limb_size = hmpc::size_constant_of<Size>;
 
         limb_type data[limb_size];
 

@@ -24,7 +24,7 @@ namespace hmpc::expr::crypto::lhe
         using value_type = u_type::value_type;
 
         using is_tuple = void;
-        static constexpr hmpc::size arity = 3;
+        static constexpr auto arity = hmpc::size_constant_of<3>;
 
         u_type u;
         v_type v;

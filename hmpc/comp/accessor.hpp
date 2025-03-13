@@ -85,7 +85,7 @@ namespace hmpc::comp
     public:
         using value_type = T;
         using limb_type = hmpc::traits::limb_type_t<value_type>;
-        static constexpr hmpc::size limb_size = hmpc::traits::limb_size_v<value_type>;
+        static constexpr auto limb_size = hmpc::traits::limb_size<value_type>{};
 
     private:
         static_assert(sizeof...(Reference) == limb_size);
@@ -102,7 +102,7 @@ namespace hmpc::comp
             if constexpr (hmpc::traits::has_limbs_v<value_type>)
             {
                 value_type result;
-                hmpc::iter::for_range<limb_size>([&](auto i)
+                hmpc::iter::for_each(hmpc::range(limb_size), [&](auto i)
                 {
                     result.data[i] = std::get<i>(references);
                 });
@@ -125,7 +125,7 @@ namespace hmpc::comp
         {
             if constexpr (hmpc::traits::has_limbs_v<value_type>)
             {
-                hmpc::iter::for_range<limb_size>([&](auto i)
+                hmpc::iter::for_each(hmpc::range(limb_size), [&](auto i)
                 {
                     std::get<i>(references) = value.data[i];
                 });
@@ -149,7 +149,7 @@ namespace hmpc::comp
         using limb_type = hmpc::traits::limb_type_t<value_type>;
         using shape_type = Shape;
         using element_shape_type = hmpc::traits::element_shape_t<value_type, shape_type>;
-        static constexpr hmpc::size limb_size = hmpc::traits::limb_size_v<value_type>;
+        static constexpr auto limb_size = hmpc::traits::limb_size<value_type>{};
 
     private:
         using accessor_type = detail::accessor_type_t<limb_type, 2, access_type, Target>;
@@ -190,7 +190,7 @@ namespace hmpc::comp
 
         constexpr auto operator[](hmpc::size i) const HMPC_NOEXCEPT
         {
-            return hmpc::iter::for_packed_range<limb_size>([&](auto... j)
+            return hmpc::iter::unpack(hmpc::range(limb_size), [&](auto... j)
             {
                 return accessor_reference<element_type, decltype(HMPC_PRIVATE_MEMBER(accessor)[sycl::id<2>{j, i}])...>{HMPC_PRIVATE_MEMBER(accessor)[sycl::id<2>{j, i}]...};
             });

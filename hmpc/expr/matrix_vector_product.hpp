@@ -17,7 +17,7 @@ namespace hmpc::expr
         static_assert(Matrix::extent(v_index) != hmpc::placeholder_extent);
         static_assert(Vector::extent(u_index) != hmpc::placeholder_extent);
 
-        return hmpc::iter::for_packed_range<matrix_rank - 2>([&](auto... i)
+        return hmpc::iter::unpack(hmpc::range(u_index), [&](auto... i)
         {
             return hmpc::shape{hmpc::common_extent(matrix.get(i), vector.get(i))..., matrix.get(u_index)};
         });
@@ -32,11 +32,11 @@ namespace hmpc::expr
         using matrix_shape_type = matrix_type::shape_type;
         using vector_shape_type = vector_type::shape_type;
 
-        static constexpr hmpc::size matrix_rank = matrix_shape_type::rank;
-        static constexpr hmpc::size vector_rank = vector_shape_type::rank;
+        static constexpr auto matrix_rank = matrix_shape_type::rank;
+        static constexpr auto vector_rank = vector_shape_type::rank;
         static_assert(matrix_rank == vector_rank + 1);
         static_assert(matrix_rank >= 2);
-        static constexpr hmpc::size sum_extent = []()
+        static constexpr auto sum_extent = []()
         {
             constexpr auto u_index = hmpc::size_constant_of<matrix_rank - 2>;
             constexpr auto v_index = hmpc::size_constant_of<matrix_rank - 1>;
@@ -44,16 +44,16 @@ namespace hmpc::expr
             static_assert(extent == vector_shape_type::extent(u_index));
             static_assert(extent != hmpc::placeholder_extent);
             static_assert(extent != hmpc::dynamic_extent);
-            return extent;
+            return hmpc::size_constant_of<extent>;
         }();
 
         using matrix_value_type = matrix_type::value_type;
         using vector_value_type = vector_type::value_type;
         using multiply_type = std::remove_cvref_t<decltype(std::declval<matrix_value_type>() * std::declval<vector_value_type>())>;
-        using value_type = std::remove_cvref_t<typename decltype(hmpc::iter::for_packed_range<sum_extent>([](auto... i){ using T = decltype(((static_cast<void>(i), std::declval<multiply_type>()) + ...)); return hmpc::detail::tag_of<T>; }))::type>;
+        using value_type = std::remove_cvref_t<typename decltype(hmpc::iter::unpack(hmpc::range(sum_extent), [](auto... i){ using T = decltype(((static_cast<void>(i), std::declval<multiply_type>()) + ...)); return hmpc::detail::tag_of<T>; }))::type>;
         using element_type = hmpc::traits::element_type_t<value_type>;
 
-        static constexpr hmpc::size arity = 2;
+        static constexpr auto arity = hmpc::size_constant_of<2>;
 
         matrix_type matrix;
         vector_type vector;
@@ -95,22 +95,22 @@ namespace hmpc::expr
         template<hmpc::index_for<element_shape_type> Index>
         static constexpr element_type operator()(hmpc::state_with_arity<2> auto const& state, Index const& index, auto& capabilities) HMPC_NOEXCEPT
         {
-            return hmpc::iter::for_packed_range<sum_extent>([&](auto... k)
+            return hmpc::iter::unpack(hmpc::range(sum_extent), [&](auto... k)
             {
                 return ([&]()
                 {
                     constexpr auto index_rank = Index::rank;
-                    auto matrix_index = hmpc::iter::for_packed_range<matrix_rank - 1>([&](auto... i)
+                    auto matrix_index = hmpc::iter::unpack(hmpc::range(hmpc::iter::prev(matrix_rank)), [&](auto... i)
                     {
-                        return hmpc::iter::for_packed_range<matrix_rank - 1, index_rank>([&](auto... j)
+                        return hmpc::iter::unpack(hmpc::range(hmpc::iter::prev(matrix_rank), index_rank), [&](auto... j)
                         {
                             return hmpc::index{index.get(i)..., k, index.get(j)...};
                         });
                     });
 
-                    auto vector_index = hmpc::iter::for_packed_range<vector_rank - 1>([&](auto... i)
+                    auto vector_index = hmpc::iter::unpack(hmpc::range(hmpc::iter::prev(vector_rank)), [&](auto... i)
                     {
-                        return hmpc::iter::for_packed_range<vector_rank, index_rank>([&](auto... j)
+                        return hmpc::iter::unpack(hmpc::range(vector_rank, index_rank), [&](auto... j)
                         {
                             return hmpc::index{index.get(i)..., k, index.get(j)...};
                         });

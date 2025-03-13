@@ -79,13 +79,13 @@ namespace hmpc::core
         using pointer_type = hmpc::access::traits::pointer_t<limb_type, access_type>;
         using reference_type = hmpc::access::traits::reference_t<limb_type, access_type>;
 
-        static constexpr hmpc::size bit_size = Bits;
+        static constexpr auto bit_size = hmpc::size_constant_of<Bits>;
 
         static constexpr hmpc::signedness signedness = Signedness;
 
-        static constexpr hmpc::size limb_bit_size = limb_type::bit_size;
-        static constexpr hmpc::size last_limb_bit_size = (bit_size % limb_bit_size) + ((bit_size % limb_bit_size == 0) and bit_size != 0) * limb_bit_size;
-        static constexpr hmpc::size limb_size = hmpc::core::limb_size_for<limb_type>(bit_size);
+        static constexpr auto limb_bit_size = limb_type::bit_size;
+        static constexpr auto last_limb_bit_size = hmpc::size_constant_of<(bit_size % limb_bit_size) + ((bit_size % limb_bit_size == 0) and bit_size != 0) * limb_bit_size>;
+        static constexpr auto limb_size = hmpc::core::limb_size_for<limb_type>(bit_size);
 
         /// Data member
         bit_span_metadata<bit_size, limb_type, signedness, access_type> data;
@@ -334,7 +334,7 @@ struct std::formatter<Span, Char>
     {
         static_assert(Span::limb_bit_size >= 4);
         static_assert(Span::limb_bit_size % 4 == 0);
-        return hmpc::iter::scan_reverse_range<Span::limb_size>([&](auto i, auto out)
+        return hmpc::iter::scan_reverse(hmpc::range(Span::limb_size), [&](auto i, auto out)
         {
             return std::format_to(out, "{:0{}x}", span.read(i).data, Span::limb_bit_size / 4);
         }, std::format_to(ctx.out(), "0x"));

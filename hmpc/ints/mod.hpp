@@ -396,7 +396,8 @@ namespace hmpc::ints
         {
             auto result = mod(hmpc::ints::one<limb_type>);
 
-            hmpc::iter::for_range<hmpc::detail::bit_width(Exponent) - 1>([&](auto i)
+            constexpr auto exponent_width = hmpc::size_constant_of<hmpc::detail::bit_width(Exponent)>;
+            hmpc::iter::for_each(hmpc::range(hmpc::iter::prev(exponent_width)), [&](auto i)
             {
                 if constexpr ((exponent >> i) & hmpc::constants::one)
                 {

@@ -18,7 +18,7 @@ namespace hmpc::detail
         using indexed_type_set_element<Is, Ts>::get...;
         using indexed_type_set_element<Is, Ts>::index_of...;
 
-        static constexpr hmpc::size size = sizeof...(Ts);
+        static constexpr auto size = hmpc::size_constant_of<sizeof...(Ts)>;
 
         template<typename T>
         static constexpr bool contains(hmpc::detail::type_tag<T> = {}) noexcept

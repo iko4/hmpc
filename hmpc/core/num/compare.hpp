@@ -9,6 +9,7 @@
 #include <hmpc/core/is_set.hpp>
 #include <hmpc/core/less.hpp>
 #include <hmpc/core/less_equal.hpp>
+#include <hmpc/core/max.hpp>
 #include <hmpc/core/not_equal_to.hpp>
 #include <hmpc/core/select.hpp>
 #include <hmpc/iter/scan_reverse_range.hpp>
@@ -20,7 +21,7 @@
         requires (hmpc::same_limb_types<Left, Right>) \
     constexpr hmpc::bit NAME(Left left, Right right) HMPC_NOEXCEPT \
     { \
-        constexpr hmpc::size limbs = std::max(left.limb_size, right.limb_size); \
+        constexpr auto limbs = hmpc::core::max(left.limb_size, right.limb_size); \
 \
         auto initial_result = [&]() \
         { \
@@ -33,7 +34,7 @@
                 return hmpc::constant_of<hmpc::bit{DEFAULT}>; \
             } \
         }(); \
-        return hmpc::iter::scan_range<limbs>([&](auto i, auto result) { return hmpc::core::JOIN(result, hmpc::core::NAME(left.extended_read(i, hmpc::access::normal), right.extended_read(i, hmpc::access::normal))); }, initial_result); \
+        return hmpc::iter::scan(hmpc::range(limbs), [&](auto i, auto result) { return hmpc::core::JOIN(result, hmpc::core::NAME(left.extended_read(i, hmpc::access::normal), right.extended_read(i, hmpc::access::normal))); }, initial_result); \
     }
 
 
@@ -42,7 +43,7 @@
         requires (hmpc::same_limb_types<Left, Right>) \
     constexpr hmpc::bit NAME(Left left, Right right) HMPC_NOEXCEPT \
     { \
-        constexpr hmpc::size limbs = std::max(left.limb_size, right.limb_size); \
+        constexpr auto limbs = hmpc::core::max(left.limb_size, right.limb_size); \
 \
         auto initial_result = [&]() \
         { \
@@ -70,7 +71,7 @@
             } \
         }(); \
 \
-        return hmpc::iter::scan_reverse_range<limbs>([&](auto i, auto result) \
+        return hmpc::iter::scan_reverse(hmpc::range(limbs), [&](auto i, auto result) \
         { \
             /* result determined | previous result | comparison | result determined | new result  \
             /  ------------------+-----------------+------------+-------------------+-----------  \

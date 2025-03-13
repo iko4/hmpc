@@ -67,15 +67,15 @@ namespace hmpc::core
     template<hmpc::size... Extents>
     struct mdsize : public mdsize_base<std::make_integer_sequence<hmpc::size, sizeof...(Extents)>, Extents...>
     {
-        static constexpr hmpc::size rank = sizeof...(Extents);
+        static constexpr auto rank = hmpc::size_constant_of<sizeof...(Extents)>;
 
-        static constexpr hmpc::size static_rank = (hmpc::size{0} + ... + hmpc::size{Extents == hmpc::dynamic_extent ? 0 : 1});
+        static constexpr auto static_rank = hmpc::size_constant_of<(hmpc::size{0} + ... + hmpc::size{Extents == hmpc::dynamic_extent ? 0 : 1})>;
 
-        static constexpr hmpc::size dynamic_rank = (hmpc::size{0} + ... + hmpc::size{Extents == hmpc::dynamic_extent ? 1 : 0});
+        static constexpr auto dynamic_rank = hmpc::size_constant_of<(hmpc::size{0} + ... + hmpc::size{Extents == hmpc::dynamic_extent ? 1 : 0})>;
 
         static_assert(rank == static_rank + dynamic_rank);
 
-        static constexpr bool is_static = (rank == static_rank);
+        static constexpr auto is_static = hmpc::bool_constant_of<(rank == static_rank)>;
 
         using index_type = hmpc::size;
         using size_type = hmpc::size;
