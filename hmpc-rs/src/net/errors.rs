@@ -1,7 +1,7 @@
 use std::num::ParseIntError;
 
 use config::ConfigError;
-use quinn::{ConnectionError, ReadExactError, ReadToEndError, WriteError};
+use quinn::{ConnectError, ConnectionError, ReadExactError, ReadToEndError, WriteError};
 use thiserror::Error;
 use tokio::sync::oneshot::error::RecvError;
 use tokio::task::JoinError;
@@ -69,6 +69,8 @@ pub enum QueueError
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum ClientError
 {
+    #[error(transparent)]
+    Connect(#[from] ConnectError),
     #[error(transparent)]
     Connection(#[from] ConnectionError),
     #[error(transparent)]
