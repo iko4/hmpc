@@ -476,20 +476,6 @@ impl Queue
             .enable_all()
             .build()?;
 
-
-        #[cfg(feature = "sessions")]
-        {
-            use super::errors::SessionError;
-            if let Some(session) = config.session.as_mut()
-            {
-                session.try_assign_value().map_err(Into::<SessionError>::into)?;
-            }
-            else
-            {
-                return Err(SessionError::NotFound.into());
-            }
-        }
-
         let (data_channel, receive_channel) = tokio::sync::mpsc::channel(CHANNEL_CAPACITY);
 
         // thread to handle data access

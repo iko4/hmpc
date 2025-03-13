@@ -91,40 +91,6 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_read_env(config: *const c_char) -> 
     }
 }
 
-/// Update the session ID of a config to values set by environment variables (if possible).
-///
-/// Returns `true` if some value is set by an environment variable, `false` otherwise.
-///
-/// # Safety
-/// The `config` pointer has to be valid.
-/// (The function only checks for `nullptr`.)
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn hmpc_ffi_net_config_session_from_env(config: Nullable<Config>) -> bool
-{
-    debug!("Trying to read session ID from environment variable");
-
-    #[cfg(not(feature = "sessions"))]
-    {
-        use log::warn;
-        warn!("The \"sessions\" feature is not enabled");
-    }
-
-    if let Some(session) = Session::try_from_env()
-    {
-        check_mut_pointer!(config, false);
-
-        let config = unsafe { config.as_mut() };
-
-        config.session.replace(session);
-
-        true
-    }
-    else
-    {
-        false
-    }
-}
-
 /// Drop a [`Config`] object and free its memory.
 ///
 /// # Safety

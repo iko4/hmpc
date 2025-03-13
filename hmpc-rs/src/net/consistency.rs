@@ -318,9 +318,8 @@ fn notify_requests(open_requests: &mut Vec<tokio::sync::oneshot::Sender<Result<(
 /// Create loop for handling collective consistency, instructed by [`ConsistencyCheckCommand`]s.
 pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio::sync::mpsc::Receiver<ConsistencyCheckCommand>, net_channel: NetChannel)
 {
-    // PANICS: Calling code checks that config.session is not None and contains a value
     #[cfg(feature = "sessions")]
-    let session = config.session.clone().unwrap().unwrap();
+    let session = config.session.clone();
     let verification_keys = config.verification_keys().await.unwrap();
     let mut consistency = HashMap::<ConsistencyCheckKey, ConsistencyCheckValue>::new();
     let mut open_requests = Vec::new();

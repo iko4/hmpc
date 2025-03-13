@@ -12,6 +12,7 @@ Versioning is done following [Semantic Versioning](https://semver.org/spec/v2.0.
 - Upgrade to Rust edition 2024.
 - Format via standard library instead of fmt library.
 - Make party ID a new type (outside of net namespace).
+- Session handling changed: Function to explicitly request change via environment is removed and is now default behavior.
 
 ### Fixed
 

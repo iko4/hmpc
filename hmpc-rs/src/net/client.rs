@@ -107,9 +107,8 @@ pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
 {
     let mut outgoing = std::collections::HashMap::<PartyID, quinn::Connection>::new();
     let endpoint = make_client(&config).await;
-    // PANICS: Calling code checks that config.session is not None and contains a value
     #[cfg(feature = "sessions")]
-    let session = config.session.clone().unwrap().unwrap();
+    let session = config.session.clone();
     #[cfg(feature = "signing")]
     let signing_key = Arc::new(config.signing_key(id).await.expect("Could not get signing key"));
 

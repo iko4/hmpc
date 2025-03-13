@@ -170,37 +170,16 @@ impl Session
             .ok()
             .or_else(|| env::var(SESSION_ID_STRING_ENVIRONMENT_VARIABLE).map(Session::String).ok())
     }
+}
+impl TryInto<SessionID> for Session
+{
+    type Error = ParseIntError;
 
-    /// Get a session ID from a [`Session`].
-    ///
-    /// Use [`Self::value`] for a non-panic alternative.
-    /// Or use [`Self::try_assign_value`] first to ensure that the object contains a value.
-    ///
-    /// # Panics
-    /// If the object is not a [`Session::Value`].
-    pub fn unwrap(self) -> SessionID
-    {
-        if let Session::Value(value) = self
-        {
-            value
-        }
-        else
-        {
-            panic!("Session does not contain a (parsed) value")
-        }
-    }
-
-    /// Get a session ID from a [`Session`].
-    ///
-    /// Parses [`Session::Parse`] and hashes [`Session::String`] values.
-    ///
-    /// # Errors
-    /// If [`Session::Parse`] cannot be parsed.
-    pub fn value(&self) -> Result<SessionID, ParseIntError>
+    fn try_into(self) -> Result<SessionID, Self::Error>
     {
         match self
         {
-            Session::Value(value) => Ok(*value),
+            Session::Value(value) => Ok(value),
             Session::Parse(s) => s.parse(),
             Session::String(s) =>
             {
@@ -218,26 +197,30 @@ impl Session
             },
         }
     }
+}
 
-    /// Assign a session ID value.
-    ///
-    /// Parses [`Session::Parse`] and hashes [`Session::String`] values.
-    ///
-    /// # Errors
-    /// If [`Session::Parse`] cannot be parsed.
-    pub fn try_assign_value(&mut self) -> Result<&mut Self, ParseIntError>
-    {
-        match self
-        {
-            Session::Value(_) => Ok(self),
-            Session::Parse(_) | Session::String(_) =>
-            {
-                let value = self.value()?;
-                *self = Session::Value(value);
-                Ok(self)
-            },
-        }
-    }
+/// Raw configuration for networking (to be parsed from files).
+///
+/// Compared to [`Config`], more members are optional that get replaced by default values if not given.
+///
+/// This includes:
+/// - all parties (including party IDs and matching [`PartyOrigin`])
+/// - a default networking port (if none is given in a [`PartyOrigin`])
+/// - a directory to look for certificates
+/// - a directory to look for certificate keys
+/// - a directory to look for signature verification keys
+/// - a directory to look for signing keys
+/// - a [`Session`]
+#[derive(Debug, Deserialize, Clone)]
+pub struct RawConfig
+{
+    pub parties: BTreeMap<PartyID, PartyOrigin>,
+    pub port: Option<Port>,
+    pub cert_dir: Option<PathBuf>,
+    pub cert_keys_dir: Option<PathBuf>,
+    pub sign_verify_dir: Option<PathBuf>,
+    pub sign_keys_dir: Option<PathBuf>,
+    pub session: Option<Session>,
 }
 
 /// Configuration for networking.
@@ -250,16 +233,17 @@ impl Session
 /// - a directory to look for signature verification keys
 /// - a directory to look for signing keys
 /// - a [`Session`]
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct Config
 {
     pub parties: BTreeMap<PartyID, PartyOrigin>,
     pub port: Option<Port>,
-    pub cert_dir: Option<PathBuf>,
-    pub cert_keys_dir: Option<PathBuf>,
-    pub sign_verify_dir: Option<PathBuf>,
-    pub sign_keys_dir: Option<PathBuf>,
-    pub session: Option<Session>,
+    pub cert_dir: PathBuf,
+    pub cert_keys_dir: PathBuf,
+    pub sign_verify_dir: PathBuf,
+    pub sign_keys_dir: PathBuf,
+    #[cfg(feature = "sessions")]
+    pub session: SessionID,
 }
 impl Config
 {
@@ -298,32 +282,41 @@ impl Config
     /// The cert/keys directories are adjusted to default paths relative to the config file if they are not given.
     ///
     /// # Errors
-    /// - [`config::ConfigError`] when parsing config fails
-    /// - [`ConfigError::NotFound`] when the cert/keys directories cannot be determined
+    /// - [`ConfigError`] when parsing config fails
+    /// - if the "sessions" feature is enabled: [`ConfigError::NotFound`] when a session cannot be determined
+    /// - if the "sessions" feature is enabled: [`ConfigError::Foreign`] when a session cannot be parsed
     pub fn read_file<P>(path: P) -> Result<Self, ConfigError>
     where
         P: AsRef<Path> + Debug,
     {
-        let mut config: Self = config::Config::builder()
+        let config: RawConfig = config::Config::builder()
             .add_source(File::from(path.as_ref()))
             .build()?
             .try_deserialize()?;
-        if config.cert_dir.is_none() || config.cert_keys_dir.is_none() || config.sign_verify_dir.is_none() || config.sign_keys_dir.is_none()
-        {
-            if let Some(dir) = path.as_ref().parent()
-            {
-                let base_dir = dir.join(".mpc");
-                config.cert_dir.get_or_insert_with(|| base_dir.join("cert"));
-                config.cert_keys_dir.get_or_insert_with(|| base_dir.join("cert-keys"));
-                config.sign_verify_dir.get_or_insert_with(|| base_dir.join("sign-verify"));
-                config.sign_keys_dir.get_or_insert_with(|| base_dir.join("sign-keys"));
-            }
-            else
-            {
-                return Err(config::ConfigError::NotFound(format!("Could not determine parent directory of {path:?}")));
-            }
-        }
-        Ok(config)
+        let base_dir = path.as_ref().parent().map_or(".mpc".into(), |dir| dir.join(".mpc"));
+
+        let cert_dir = config.cert_dir.unwrap_or_else(|| base_dir.join("cert"));
+        let cert_keys_dir = config.cert_keys_dir.unwrap_or_else(|| base_dir.join("cert-keys"));
+        let sign_verify_dir = config.sign_verify_dir.unwrap_or_else(|| base_dir.join("sign-verify"));
+        let sign_keys_dir = config.sign_keys_dir.unwrap_or_else(|| base_dir.join("sign-keys"));
+
+        #[cfg(feature = "sessions")]
+        let session = Session::try_from_env()
+            .or(config.session)
+            .ok_or(ConfigError::NotFound(format!("No session available")))?
+            .try_into()
+            .map_err(|e: ParseIntError| ConfigError::Foreign(e.into()))?;
+
+        Ok(Self {
+            parties: config.parties,
+            port: config.port,
+            cert_dir,
+            cert_keys_dir,
+            sign_verify_dir,
+            sign_keys_dir,
+            #[cfg(feature = "sessions")]
+            session,
+        })
     }
 
     /// Port of party `id`.
@@ -353,57 +346,37 @@ impl Config
     }
 
     /// Filename of party `id`'s certificate.
-    ///
-    /// # Panics
-    /// If `cert_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn cert_filename(&self, id: PartyID) -> PathBuf
     {
-        self.cert_dir.as_ref().unwrap().join(format!("{id}.x509.cert.der"))
+        self.cert_dir.join(format!("{id}.x509.cert.der"))
     }
 
     /// Filename of party `id`'s certificate private key.
-    ///
-    /// # Panics
-    /// If `cert_keys_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn cert_key_filename(&self, id: PartyID) -> PathBuf
     {
-        self.cert_keys_dir.as_ref().unwrap().join(format!("{id}.cert-private.key.der"))
+        self.cert_keys_dir.join(format!("{id}.cert-private.key.der"))
     }
 
     /// Filename of party `id`'s signature verification key.
-    ///
-    /// # Panics
-    /// If `sign_verify_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn verification_key_filename(&self, id: PartyID) -> PathBuf
     {
-        self.sign_verify_dir.as_ref().unwrap().join(format!("{id}.ed25519-public.key.bin"))
+        self.sign_verify_dir.join(format!("{id}.ed25519-public.key.bin"))
     }
 
     /// Filename of party `id`'s signing key.
-    ///
-    /// # Panics
-    /// If `sign_keys_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn signing_key_filename(&self, id: PartyID) -> PathBuf
     {
-        self.sign_keys_dir.as_ref().unwrap().join(format!("{id}.ed25519-private.key.der"))
+        self.sign_keys_dir.join(format!("{id}.ed25519-private.key.der"))
     }
 
     /// Load the certificate of party `id`.
     ///
     /// # Errors
     /// If the file could not be read.
-    ///
-    /// # Panics
-    /// If `cert_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     pub async fn cert(&self, id: PartyID) -> Result<CertificateDer, tokio::io::Error>
     {
         let cert = tokio::fs::read(self.cert_filename(id)).await?;
@@ -415,9 +388,6 @@ impl Config
     /// See [`Self::cert`].
     ///
     /// # Errors
-    /// See [`Self::cert`].
-    ///
-    /// # Panics
     /// See [`Self::cert`].
     pub async fn certs(&self) -> Result<rustls::RootCertStore, CertificateError>
     {
@@ -433,10 +403,6 @@ impl Config
     ///
     /// # Errors
     /// If the file could not be read.
-    ///
-    /// # Panics
-    /// If `cert_dir` or `cert_keys_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     pub async fn cert_and_key(&self, id: PartyID) -> Result<(CertificateDer<'static>, PrivateKeyDer<'static>), tokio::io::Error>
     {
         let cert = tokio::fs::read(self.cert_filename(id)).await?;
@@ -450,10 +416,6 @@ impl Config
     ///
     /// # Errors
     /// If the file could not be read.
-    ///
-    /// # Panics
-    /// If `cert_dir` or `cert_keys_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     pub fn cert_and_key_blocking(&self, id: PartyID) -> Result<(CertificateDer<'static>, PrivateKeyDer<'static>), std::io::Error>
     {
         let cert = fs::read(self.cert_filename(id))?;
@@ -467,10 +429,6 @@ impl Config
     ///
     /// # Errors
     /// If the file could not be read.
-    ///
-    /// # Panics
-    /// If `sign_verify_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     #[cfg(feature = "signing")]
     pub async fn verification_key(&self, id: PartyID) -> Result<PublicKey, tokio::io::Error>
     {
@@ -481,9 +439,6 @@ impl Config
     /// Load all verification keys.
     ///
     /// # Errors
-    /// See [`Self::verification_key`].
-    ///
-    /// # Panics
     /// See [`Self::verification_key`].
     #[cfg(feature = "signing")]
     pub async fn verification_keys(&self) -> Result<HashMap<PartyID, PublicKey>, tokio::io::Error>
@@ -501,10 +456,6 @@ impl Config
     ///
     /// # Errors
     /// If the file could not be read or the key is rejected.
-    ///
-    /// # Panics
-    /// If `sign_keys_dir` is `None`.
-    /// This should not happen with a properly constructed [`Config`].
     #[cfg(feature = "signing")]
     pub async fn signing_key(&self, id: PartyID) -> Result<PrivateKey, tokio::io::Error>
     {
