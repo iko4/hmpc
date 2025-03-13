@@ -4,7 +4,7 @@ use std::ptr::NonNull;
 
 use crate::vec::Vec2d;
 
-/// Wrapper for array/vector data coming from C++.
+/// Wrapper for array/vector data coming from foreign code.
 #[repr(C)]
 #[derive(Debug)]
 pub struct Span<T>
@@ -15,12 +15,14 @@ pub struct Span<T>
 
 impl<T: Clone> Span<T>
 {
-    /// Constructs a(n ordered) set from pointer and length
-    /// # Safety
-    /// The `data` pointer has to be valid. (The function does *not* check for `nullptr`. Use `try_to_set` instead.)
-    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
+    /// Constructs a(n ordered) set from pointer and length.
     ///
     /// If `len` is zero, the value of the pointer is ignored and an empty set is returned.
+    ///
+    /// # Safety
+    /// The `data` pointer has to be valid.
+    /// (The function does *not* check for `nullptr`. Use [`Self::try_to_set`] instead.)
+    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
     #[must_use]
     pub unsafe fn to_set(self) -> BTreeSet<T>
     where
@@ -35,12 +37,14 @@ impl<T: Clone> Span<T>
         data.iter().cloned().collect()
     }
 
-    /// Constructs a vector from pointer and length
-    /// # Safety
-    /// The `data` pointer has to be valid. (The function does *not* check for `nullptr`. Use `try_to_vec` instead.)
-    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
+    /// Constructs a vector from pointer and length.
     ///
     /// If `len` is zero, the value of the pointer is ignored and an empty vector is returned.
+    ///
+    /// # Safety
+    /// The `data` pointer has to be valid.
+    /// (The function does *not* check for `nullptr`. Use [`Self::try_to_vec`] instead.)
+    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
     #[must_use]
     pub unsafe fn to_vec(self) -> Vec<T>
     {
@@ -53,12 +57,12 @@ impl<T: Clone> Span<T>
         data.to_vec()
     }
 
-    /// Constructs a(n ordered) set from pointer and length, returning `None` if the pointer is null (unless the length is also zero)
-    /// # Safety
-    /// The `data` pointer has to be valid. (The function only checks for `nullptr`.)
-    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
+    /// Constructs a(n ordered) set from pointer and length, returning `None` if the pointer is null (unless the length is also zero).
     ///
-    /// If `len` is zero, the value of the pointer is ignored and an empty set is returned.
+    /// # Safety
+    /// The `data` pointer has to be valid.
+    /// (The function only checks for `nullptr`.)
+    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
     #[must_use]
     pub unsafe fn try_to_set(self) -> Option<BTreeSet<T>>
     where
@@ -77,12 +81,12 @@ impl<T: Clone> Span<T>
         unsafe { Some(self.to_set()) }
     }
 
-    /// Constructs a vector from pointer and length, returning `None` if the pointer is null (unless the length is also zero)
-    /// # Safety
-    /// The `data` pointer has to be valid. (The function only checks for `nullptr`.)
-    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
+    /// Constructs a vector from pointer and length, returning `None` if the pointer is null (unless the length is also zero).
     ///
-    /// If `len` is zero, the value of the pointer is ignored and an empty vector is returned.
+    /// # Safety
+    /// The `data` pointer has to be valid.
+    /// (The function only checks for `nullptr`.)
+    /// The `data` pointer has to point to a region of (at least) `len` valid objects of type `T`.
     #[must_use]
     pub unsafe fn try_to_vec(self) -> Option<Vec<T>>
     {
@@ -102,11 +106,12 @@ impl<T: Clone> Span<T>
 
 impl<T> Span<Option<NonNull<T>>>
 {
-    /// Constructs a vector from pointer and length
+    /// Constructs a vector from pointer and length.
     /// If any pointer inside the vector would be null, `None` is returned as well.
-    /// See `to_vec`.
+    /// See [`Self::to_vec`].
+    ///
     /// # Safety
-    /// See `to_vec`.
+    /// See [`Self::to_vec`].
     #[must_use]
     pub unsafe fn try_to_non_null_vec(self) -> Option<Vec<NonNull<T>>>
     {
@@ -133,7 +138,7 @@ impl<T> Span<Option<NonNull<T>>>
     }
 }
 
-/// Wrapper for 2d array/vector data coming from C++.
+/// Wrapper for 2d array/vector data coming from C ode.
 #[allow(clippy::module_name_repetitions)]
 #[repr(C)]
 #[derive(Debug)]
@@ -146,12 +151,14 @@ pub struct Span2d<T>
 
 impl<T: Clone> Span2d<T>
 {
-    /// Constructs a 2d vector from pointer and lengths
-    /// # Safety
-    /// The `data` pointer has to be valid. (The function does *not* check for `nullptr`. Use `try_to_vec` instead.)
-    /// The `data` pointer has to point to a region of (at least) `inner_extent * outer_extent` valid objects of type `T`.
+    /// Constructs a 2d vector from pointer and lengths.
     ///
     /// If any extent is zero, the value of the pointer is ignored and an empty vector is returned.
+    ///
+    /// # Safety
+    /// The `data` pointer has to be valid.
+    /// (The function does *not* check for `nullptr`. Use [`Self::try_to_vec`] instead.)
+    /// The `data` pointer has to point to a region of (at least) `inner_extent * outer_extent` valid objects of type `T`.
     #[must_use]
     pub unsafe fn to_vec(self) -> Vec2d<T>
     {
@@ -164,12 +171,12 @@ impl<T: Clone> Span2d<T>
         Vec2d::from(data, self.outer_extent, self.inner_extent)
     }
 
-    /// Constructs a 2d vector from pointer and lengths, returning `None` if the pointer is null (unless the extents are also zero)
-    /// # Safety
-    /// The `data` pointer has to be valid. (The function only checks for `nullptr`.)
-    /// The `data` pointer has to point to a region of (at least) `inner_extent * outer_extent` valid objects of type `T`.
+    /// Constructs a 2d vector from pointer and lengths, returning `None` if the pointer is null (unless the extents are also zero).
     ///
-    /// If any extent is zero, the value of the pointer is ignored and an empty vector is returned.
+    /// # Safety
+    /// The `data` pointer has to be valid.
+    /// (The function only checks for `nullptr`.)
+    /// The `data` pointer has to point to a region of (at least) `inner_extent * outer_extent` valid objects of type `T`.
     #[must_use]
     pub unsafe fn try_to_vec(self) -> Option<Vec2d<T>>
     {
@@ -189,11 +196,12 @@ impl<T: Clone> Span2d<T>
 
 impl<T> Span2d<Option<NonNull<T>>>
 {
-    /// Constructs a 2d vector from pointer and lengths
+    /// Constructs a 2d vector from pointer and lengths.
     /// If any pointer inside the vector would be null, `None` is returned as well.
-    /// See `to_vec`.
+    /// See [`Self::to_vec`].
+    ///
     /// # Safety
-    /// See `to_vec`.
+    /// See [`Self::to_vec`].
     #[must_use]
     pub unsafe fn try_to_non_null_vec(self) -> Option<Vec2d<NonNull<T>>>
     {

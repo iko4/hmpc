@@ -1,5 +1,10 @@
 use std::slice::ChunksExact;
 
+/// Wrapper for a two dimensional data structure.
+///
+/// The underlying data is stored one dimensional.
+/// The data is structured to have an `outer_extent` and an `inner_extent`.
+/// When iterating, slices of size `outer_extent` are yielded along the `outer_extent` axis.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct Vec2d<T>

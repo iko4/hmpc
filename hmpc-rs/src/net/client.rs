@@ -1,43 +1,46 @@
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
-use log::{debug, info};
+use log::{debug, error, info};
 use quinn::crypto::rustls::QuicClientConfig;
 use quinn::{Connection, TransportConfig};
 
+#[cfg(feature = "sessions")]
+use super::SessionID;
 use super::config::DEFAULT_TIMEOUT;
 use super::errors::ClientError;
 #[cfg(feature = "signing")]
 use super::sign::PrivateKey;
-#[cfg(feature = "sessions")]
-use super::SessionID;
-use super::{make_addr, Config, NetCommand, PartyID, SendMessage};
+use super::{Config, NetCommand, PartyID, SendMessage, make_addr};
 
+/// Make client endpoint.
 async fn make_client(config: &Config) -> quinn::Endpoint
 {
     // TODO: Use other wildcard address to bind to
     // TODO: Could make IPv4/IPv6 configurable
-    let mut endpoint = quinn::Endpoint::client((std::net::Ipv6Addr::UNSPECIFIED, 0).into()).unwrap();
+    let mut endpoint = quinn::Endpoint::client((std::net::Ipv6Addr::UNSPECIFIED, 0).into()).expect("Could not create client endpoint");
     endpoint.set_default_client_config(make_client_config(config).await);
     endpoint
 }
 
+/// Make client config (for [`make_client`]).
 async fn make_client_config(config: &Config) -> quinn::ClientConfig
 {
     let crypto = rustls::ClientConfig::builder()
-        .with_root_certificates(config.certs().await.unwrap())
+        .with_root_certificates(config.certs().await.expect("Could not get certificates"))
         .with_no_client_auth();
 
-    let mut transport_config = Arc::new(TransportConfig::default());
-    Arc::get_mut(&mut transport_config)
-        .unwrap()
-        .max_idle_timeout(Some(DEFAULT_TIMEOUT.try_into().unwrap()));
+    let mut transport_config = TransportConfig::default();
+    transport_config.max_idle_timeout(Some(DEFAULT_TIMEOUT.try_into().expect("Invalid idle timeout")));
 
-    let mut client_config = quinn::ClientConfig::new(Arc::new(QuicClientConfig::try_from(crypto).unwrap()));
-    client_config.transport_config(transport_config);
+    let quic_config = QuicClientConfig::try_from(crypto).expect("Could not create QUIC config");
+
+    let mut client_config = quinn::ClientConfig::new(Arc::new(quic_config));
+    client_config.transport_config(Arc::new(transport_config));
     client_config
 }
 
+/// Open or reuse connection.
 async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoint: &quinn::Endpoint, outgoing: &mut std::collections::HashMap<PartyID, quinn::Connection>) -> Result<quinn::Connection, ClientError>
 {
     match outgoing.entry(receiver)
@@ -58,11 +61,13 @@ async fn make_connection(id: PartyID, receiver: PartyID, config: &Config, endpoi
     }
 }
 
+/// Open new connection.
 async fn connect_client(client: &quinn::Endpoint, id: PartyID, config: &Config) -> Result<quinn::Connection, ClientError>
 {
     client.connect(make_addr(id, config), config.name(id))?.await.map_err(Into::into)
 }
 
+/// Try sending message over network.
 async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: SessionID, #[cfg(feature = "signing")] signing_key: Arc<PrivateKey>, connection: Connection, message: SendMessage, answer_channel: tokio::sync::oneshot::Sender<Result<(), ClientError>>)
 {
     debug!("[Party {}] Outgoing stream: to {}", id, connection.remote_address());
@@ -71,7 +76,7 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: Se
         Ok(stream) => stream,
         Err(e) =>
         {
-            answer_channel.send(Err(ClientError::Connection(e))).unwrap();
+            answer_channel.send(Err(ClientError::Connection(e))).expect("No longer waiting for result");
             return;
         },
     };
@@ -85,18 +90,19 @@ async fn handle_connection(id: PartyID, #[cfg(feature = "sessions")] session: Se
     )
     .await
     {
-        answer_channel.send(Err(ClientError::Write(e))).unwrap();
+        answer_channel.send(Err(ClientError::Write(e))).expect("No longer waiting for result");
         return;
     };
     debug!("[Party {}] Finished writing stream", id);
     if let Err(e) = stream.finish()
     {
-        answer_channel.send(Err(ClientError::Write(e.into()))).unwrap();
+        answer_channel.send(Err(ClientError::Write(e.into()))).expect("No longer waiting for result");
         return;
     };
-    answer_channel.send(Ok(())).unwrap();
+    answer_channel.send(Ok(())).expect("No longer waiting for result");
 }
 
+/// Create loop for sending messages over the network, instructed by [`NetCommand`]s.
 pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio::sync::mpsc::Receiver<NetCommand>)
 {
     let mut outgoing = std::collections::HashMap::<PartyID, quinn::Connection>::new();
@@ -105,7 +111,7 @@ pub(crate) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
     #[cfg(feature = "sessions")]
     let session = config.session.clone().unwrap().unwrap();
     #[cfg(feature = "signing")]
-    let signing_key = Arc::new(config.signing_key(id).await.unwrap());
+    let signing_key = Arc::new(config.signing_key(id).await.expect("Could not get signing key"));
 
     while let Some(command) = receive_channel.recv().await
     {

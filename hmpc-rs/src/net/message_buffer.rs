@@ -4,7 +4,7 @@ use log::{debug, error, warn};
 
 use super::{DataCommand, OwnedData, PartyID};
 
-
+/// Create loop for handling requested and received messages, instructed by [`DataCommand`]s.
 pub(crate) async fn run(id: PartyID, mut receive_channel: tokio::sync::mpsc::Receiver<DataCommand>)
 {
     let mut message_buffer = HashMap::<_, OwnedData>::new();

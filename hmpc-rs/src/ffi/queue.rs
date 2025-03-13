@@ -1,17 +1,19 @@
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
 use super::errors::SendReceiveErrc;
-use super::{check_communicator, check_mut_pointer, check_non_null_vec, check_pointer, check_size_eq, check_span, check_vec, free_nullable, nullable, set_logger, Communicator, Config, NetworkStatistics, NullableData, PartyID, Queue, Span, Span2d};
+use super::{Communicator, Config, NetworkStatistics, NullableData, PartyID, Queue, Span, Span2d, check_communicator, check_mut_pointer, check_non_null_vec, check_pointer, check_size_eq, check_span, check_vec, free_nullable, nullable, set_logger};
 use crate::net::metadata::{AllGather, AllToAll, Broadcast, Gather};
 use crate::net::ptr::Nullable;
 
-/// Construct a `Queue` object for network operations
+/// Construct a [`Queue`] object for communication operations.
 ///
-/// Note that this *frees the config object* if it is given.
-/// Also sets the global logger to a (defaulted) `env_logger`.
+/// Note that this *consumes (frees) the config object* if it is given.
+/// If config is `nullptr`, a default config is created.
+/// Also sets the global logger to a (defaulted) [`env_logger`].
+///
 /// # Safety
-/// If `config` is not null, this function frees the passed pointer with `Box::from_raw`.
-/// As a caller, ensure that the pointer actually comes from a `Box` and is not freed multiple times.
+/// If `config` is not null, this function frees the passed pointer with [`Box::from_raw`].
+/// As a caller, ensure that the pointer actually comes from a [`Box`] and is not freed multiple times.
 /// This function only checks for `nullptr` but cannot do any other checks.
 #[must_use]
 #[unsafe(no_mangle)]
@@ -28,7 +30,7 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_init(id: PartyID, config: Nullable<C
     }
     else
     {
-        warn!("Config was null. Consider constructing a config. Trying to load config from default path.");
+        info!("Config was null. Consider constructing a config. Trying to load config from default path.");
         match Config::read(None)
         {
             Ok(config) => config,
@@ -51,10 +53,11 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_init(id: PartyID, config: Nullable<C
     }
 }
 
-/// Drop a `Queue` object and free its memory
+/// Drop a [`Queue`] object and free its memory.
+///
 /// # Safety
-/// This function frees the passed pointer with `Box::from_raw`.
-/// As a caller, ensure that the pointer actually comes from a `Box` and is not freed multiple times.
+/// This function frees the passed pointer with [`Box::from_raw`].
+/// As a caller, ensure that the pointer actually comes from a [`Box`] and is not freed multiple times.
 /// This function only checks for `nullptr` but cannot do any other checks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_free(queue: Nullable<Queue>)
@@ -63,13 +66,17 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_free(queue: Nullable<Queue>)
     free_nullable!(queue);
 }
 
-/// Perform a broadcast network operation via the `Queue` object
+/// Perform a broadcast communication operation via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `data` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `data` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 /// The `data` pointer has to point to a region of (at least) `message.size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_broadcast(queue: Nullable<Queue>, message: Broadcast, communicator: Communicator, data: NullableData) -> SendReceiveErrc
@@ -93,16 +100,22 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_broadcast(queue: Nullable<Queue>, me
     }
 }
 
-/// Perform multiple broadcast network operations via the `Queue` object
+/// Perform multiple broadcast communication operations via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `messages` span has to be valid. (The function only checks for `nullptr`.)
+/// The `messages` span has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `data` span has to be valid. (The function only checks for `nullptr`.)
-/// Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `data[i]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_broadcast(queue: Nullable<Queue>, messages: Span<Broadcast>, communicator: Communicator, data: Span<NullableData>) -> SendReceiveErrc
@@ -128,21 +141,28 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_broadcast(queue: Nullable<Queu
     }
 }
 
-/// Perform a gather network operation via the `Queue` object
+/// Perform a gather communication operation via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `data` span has to be valid. (The function only checks for `nullptr`.)
+/// The `data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+///
 /// If `message.receiver == queue.id`:
 /// - `data` and `communicator` have to have the same length.
-/// - Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
+/// - Each `data[i]` pointer has to be valid.
+///   (The function only checks for `nullptr`.)
 /// - Each `data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
 ///
 /// Otherwise:
 /// - `data` has length 1.
-/// - The `data[0]` pointer has to be valid. (The function only checks for `nullptr`.)
+/// - The `data[0]` pointer has to be valid.
+///   (The function only checks for `nullptr`.)
 /// - The `data[0]` pointer has to point to a region of (at least) `message.size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_gather(queue: Nullable<Queue>, message: Gather, communicator: Communicator, data: Span<NullableData>) -> SendReceiveErrc
@@ -175,26 +195,34 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_gather(queue: Nullable<Queue>, messa
     }
 }
 
-/// Perform multiple gather network operations via the `Queue` object
-/// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// Perform multiple gather communication operations via the [`Queue`] object.
 ///
-/// The `messages` span has to be valid. (The function only checks for `nullptr`.)
+/// # Safety
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+///
+/// The `messages` span has to be valid.
+/// (The function only checks for `nullptr`.)
 /// This includes that
 /// - all `messages[i].receiver == queue.id` or
 /// - all `messages[i].receiver != queue.id`
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `data` span has to be valid. (The function only checks for `nullptr`.)
+/// The `data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+///
 /// If all `message[s].receiver == queue.id`:
 /// - `data[i]` and `communicator` have to have the same length.
-/// - Each `data[i][j]` pointer has to be valid. (The function only checks for `nullptr`.)
+/// - Each `data[i][j]` pointer has to be valid.
+///   (The function only checks for `nullptr`.)
 /// - Each `data[i][j]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
 ///
 /// Otherwise:
 /// - `data[i]` has length 1.
-/// - The `data[i][0]` pointer has to be valid. (The function only checks for `nullptr`.)
+/// - The `data[i][0]` pointer has to be valid.
+///   (The function only checks for `nullptr`.)
 /// - The `data[i][0]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_gather(queue: Nullable<Queue>, messages: Span<Gather>, communicator: Communicator, data: Span2d<NullableData>) -> SendReceiveErrc
@@ -237,14 +265,19 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_gather(queue: Nullable<Queue>,
     }
 }
 
-/// Perform an all-gather network operation via the `Queue` object
+/// Perform an all-gather communication operation via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `data` span has to be valid. (The function only checks for `nullptr`.)
-/// Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `data[i]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_all_gather(queue: Nullable<Queue>, message: AllGather, communicator: Communicator, data: Span<NullableData>) -> SendReceiveErrc
@@ -268,16 +301,23 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_all_gather(queue: Nullable<Queue>, m
     }
 }
 
-/// Perform multiple all-gather network operation via the `Queue` object
+/// Perform multiple all-gather communication operation via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `messages` span has to be valid. (The function only checks for `nullptr`.)
+/// The `messages` span has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `data` span has to be valid. (The function only checks for `nullptr`.)
-// TODO: clarify validity for data
+/// The `data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `data[i][j]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `data[i][j]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_gather(queue: Nullable<Queue>, messages: Span<AllGather>, communicator: Communicator, data: Span2d<NullableData>) -> SendReceiveErrc
 {
@@ -303,14 +343,22 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_gather(queue: Nullable<Que
     }
 }
 
-/// Perform an extended all-gather network operation via the `Queue` object
-/// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
-/// The `senders` communicator has to be valid. (The function only checks for `nullptr`.)
-/// The `receivers` communicator has to be valid. (The function only checks for `nullptr`.)
+/// Perform an extended all-gather communication operation via the [`Queue`] object.
 ///
-/// The `data` span has to be valid. (The function only checks for `nullptr`.)
-/// Each `data[i]` pointer has to be valid. (The function only checks for `nullptr`.)
+/// # Safety
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+///
+/// The `senders` communicator has to be valid.
+/// (The function only checks for `nullptr`.)
+///
+/// The `receivers` communicator has to be valid.
+/// (The function only checks for `nullptr`.)
+///
+/// The `data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `data[i]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 /// Each `data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_all_gather(queue: Nullable<Queue>, message: AllGather, senders: Communicator, receivers: Communicator, data: Span<NullableData>) -> SendReceiveErrc
@@ -341,18 +389,26 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_all_gather(queue: Nullable<
     }
 }
 
-/// Perform multiple extended all-gather network operation via the `Queue` object
+/// Perform multiple extended all-gather communication operation via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `messages` span has to be valid. (The function only checks for `nullptr`.)
+/// The `messages` span has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `senders` communicator has to be valid. (The function only checks for `nullptr`.)
+/// The `senders` communicator has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `receivers` communicator has to be valid. (The function only checks for `nullptr`.)
+/// The `receivers` communicator has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `data` span has to be valid. (The function only checks for `nullptr`.)
-// TODO: clarify validity for data
+/// The `data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `data[i][j]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `data[i][j]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_multi_all_gather(queue: Nullable<Queue>, messages: Span<AllGather>, senders: Communicator, receivers: Communicator, data: Span2d<NullableData>) -> SendReceiveErrc
 {
@@ -384,16 +440,26 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_extended_multi_all_gather(queue: Nul
     }
 }
 
-/// Perform an all-to-all network operation via the `Queue` object
+/// Perform an all-to-all communication operation via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `send_data` span has to be valid. (The function only checks for `nullptr`.)
+/// The `send_data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `send_data[i]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `send_data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
 ///
-/// The `receive_data` span has to be valid. (The function only checks for `nullptr`.)
-// TODO: clarify validity for send_data and receive_data
+/// The `receive_data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `receive_data[i]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `receive_data[i]` pointer has to point to a region of (at least) `message.size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_all_to_all(queue: Nullable<Queue>, message: AllToAll, communicator: Communicator, send_data: Span<NullableData>, receive_data: Span<NullableData>) -> SendReceiveErrc
 {
@@ -419,18 +485,29 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_all_to_all(queue: Nullable<Queue>, m
     }
 }
 
-/// Perform multiple all-to-all network operation via the `Queue` object
+/// Perform multiple all-to-all communication operation via the [`Queue`] object.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `messages` span has to be valid. (The function only checks for `nullptr`.)
+/// The `messages` span has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `communicator` has to be valid. (The function only checks for `nullptr`.)
+/// The `communicator` has to be valid.
+/// (The function only checks for `nullptr`.)
 ///
-/// The `send_data` span has to be valid. (The function only checks for `nullptr`.)
+/// The `send_data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `send_data[i][j]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `send_data[i][j]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
 ///
-/// The `receive_data` span has to be valid. (The function only checks for `nullptr`.)
-// TODO: clarify validity for send_data and receive_data
+/// The `receive_data` span has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `receive_data[i][j]` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
+/// Each `receive_data[i][j]` pointer has to point to a region of (at least) `messages[i].size` valid bytes.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_to_all(queue: Nullable<Queue>, messages: Span<AllToAll>, communicator: Communicator, send_data: Span2d<NullableData>, receive_data: Span2d<NullableData>) -> SendReceiveErrc
 {
@@ -465,13 +542,16 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_multi_all_to_all(queue: Nullable<Que
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(_queue: Nullable<Queue>) -> SendReceiveErrc
 {
+    use log::warn;
     warn!("The \"collective-consistency\" feature is not enabled");
     SendReceiveErrc::Ok
 }
 
-/// Wait for collective communication operations to finish
+/// Wait for collective communication operations to finish.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 #[cfg(feature = "collective-consistency")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(queue: Nullable<Queue>) -> SendReceiveErrc
@@ -499,16 +579,20 @@ pub unsafe extern "C" fn hmpc_ffi_net_queue_wait(queue: Nullable<Queue>) -> Send
 #[unsafe(no_mangle)]
 pub extern "C" fn hmpc_ffi_net_queue_network_statistics(_queue: Nullable<Queue>) -> NetworkStatistics
 {
+    use log::warn;
     warn!("The \"statistics\" feature is not enabled");
     NetworkStatistics::new()
 }
 
-/// Retrieve network statistics from a `Queue` object.
+/// Retrieve network statistics from the [`Queue`] object.
+///
 /// This is only the estimated number of bytes send and received.
 /// If messages did not yet arrive or errors occurred (or unexpected messages arrived), this number is off.
 /// Currently, this only includes the payload of messages.
+///
 /// # Safety
-/// The `queue` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `queue` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 #[cfg(feature = "statistics")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_queue_network_statistics(queue: Nullable<Queue>) -> NetworkStatistics

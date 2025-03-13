@@ -17,23 +17,23 @@ use thiserror::Error;
 use super::hash::hash;
 #[cfg(feature = "signing")]
 use super::sign::{PrivateKey, PublicKey};
-use super::{PartyID, SessionID, SESSION_ID_SIZE};
+use super::{PartyID, SESSION_ID_SIZE, SessionID};
 
 pub type Port = u16;
 
-/// Name of environment variable that contains a path for a config file
+/// Name of environment variable that contains a path for a config file.
 const CONFIG_PATH_ENVIRONMENT_VARIABLE: &str = "HMPC_CONFIG";
-/// Name of environment variable that contains the session value
+/// Name of environment variable that contains the session value.
 const SESSION_ID_VALUE_ENVIRONMENT_VARIABLE: &str = "HMPC_SESSION_VALUE";
-/// Name of environment variable that contains the session string to be hashed
+/// Name of environment variable that contains the session string to be hashed.
 const SESSION_ID_STRING_ENVIRONMENT_VARIABLE: &str = "HMPC_SESSION_STRING";
-/// Default path for config file
+/// Default path for config file.
 const DEFAULT_PATH: &str = "mpc.yaml";
-/// Default port if none is given
+/// Default port if none is given.
 pub(crate) const DEFAULT_PORT: Port = 5000;
-/// Timeout for connections
+/// Timeout for connections.
 pub(crate) const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10 * 60);
-/// Capacity for `tokio::sync::mpsc` channels
+/// Capacity for [`tokio::sync::mpsc`] channels.
 pub(crate) const CHANNEL_CAPACITY: usize = 10;
 
 #[derive(Debug, Error)]
@@ -142,20 +142,27 @@ impl<'de> Deserialize<'de> for PartyOrigin
     }
 }
 
+/// Session ID in a [`Config`].
+///
+/// Can be given as value ([`Session::Value`]) or string.
+/// For strings, the string can be either a string representation of a value ([`Session::Parse`]) or something that is hashed ([`Session::String`]) to get the session ID.
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum Session
 {
-    /// Session is given as value that can be directly used as-is
-    /// TODO: Currently, deserializing u128 values does not work with the `config` crate, use `Parse` in a config
+    /// Session is given as value that can be directly used as-is.
+    /// TODO: Currently, deserializing u128 values does not work with the [`config`] crate. Use [`Session::Parse`] instead.
     Value(SessionID),
-    /// Session is given as value that can be directly used as-is (after parsing)
+    /// Session is given as value that can be directly used as-is (after parsing).
     Parse(String),
-    /// Session is given as string that will be hashed
+    /// Session is given as string that will be hashed.
     String(String),
 }
 impl Session
 {
+    /// Try to get the a [`Session`] from the environment.
+    ///
+    /// First tries a value representation ([`SESSION_ID_VALUE_ENVIRONMENT_VARIABLE`]) and then a string representation ([`SESSION_ID_STRING_ENVIRONMENT_VARIABLE`]).
     pub fn try_from_env() -> Option<Session>
     {
         env::var(SESSION_ID_VALUE_ENVIRONMENT_VARIABLE)
@@ -164,6 +171,13 @@ impl Session
             .or_else(|| env::var(SESSION_ID_STRING_ENVIRONMENT_VARIABLE).map(Session::String).ok())
     }
 
+    /// Get a session ID from a [`Session`].
+    ///
+    /// Use [`Self::value`] for a non-panic alternative.
+    /// Or use [`Self::try_assign_value`] first to ensure that the object contains a value.
+    ///
+    /// # Panics
+    /// If the object is not a [`Session::Value`].
     pub fn unwrap(self) -> SessionID
     {
         if let Session::Value(value) = self
@@ -176,6 +190,12 @@ impl Session
         }
     }
 
+    /// Get a session ID from a [`Session`].
+    ///
+    /// Parses [`Session::Parse`] and hashes [`Session::String`] values.
+    ///
+    /// # Errors
+    /// If [`Session::Parse`] cannot be parsed.
     pub fn value(&self) -> Result<SessionID, ParseIntError>
     {
         match self
@@ -199,6 +219,12 @@ impl Session
         }
     }
 
+    /// Assign a session ID value.
+    ///
+    /// Parses [`Session::Parse`] and hashes [`Session::String`] values.
+    ///
+    /// # Errors
+    /// If [`Session::Parse`] cannot be parsed.
     pub fn try_assign_value(&mut self) -> Result<&mut Self, ParseIntError>
     {
         match self
@@ -214,6 +240,16 @@ impl Session
     }
 }
 
+/// Configuration for networking.
+///
+/// This includes:
+/// - all parties (including party IDs and matching [`PartyOrigin`])
+/// - a default networking port (if none is given in a [`PartyOrigin`])
+/// - a directory to look for certificates
+/// - a directory to look for certificate keys
+/// - a directory to look for signature verification keys
+/// - a directory to look for signing keys
+/// - a [`Session`]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config
 {
@@ -227,12 +263,13 @@ pub struct Config
 }
 impl Config
 {
-    /// Read a config from file
+    /// Read a [`Config`] from file.
     ///
-    /// Uses default path (see `default_path`) if `config` is `None`.
-    /// See `read_file` for more details.
+    /// Uses default path (see [`default_path`]) if `config` is `None`.
+    /// See [`Self::read_file`] for more details.
+    ///
     /// # Errors
-    /// See `read_file`
+    /// See [`Self::read_file`].
     pub fn read(config: Option<PathBuf>) -> Result<Self, config::ConfigError>
     {
         let config = config.unwrap_or_else(default_path);
@@ -240,14 +277,15 @@ impl Config
         Self::read_file(config)
     }
 
-    /// Read a config from file
+    /// Read a config from file.
     ///
     /// Uses environment path of the config if available.
     /// If not, checks if the given input is available.
     /// Otherwise, uses the fallback path.
-    /// See `read_file` for more details.
+    /// See [`Self::read_file`] for more details.
+    ///
     /// # Errors
-    /// See `read_file`
+    /// See [`Self::read_file`].
     pub fn read_env(config: Option<PathBuf>) -> Result<Self, config::ConfigError>
     {
         let config = path_from_env().or(config).unwrap_or_else(fallback_path);
@@ -255,13 +293,13 @@ impl Config
         Self::read_file(config)
     }
 
-    /// Read a config from a given file
+    /// Read a config from a given file.
     ///
     /// The cert/keys directories are adjusted to default paths relative to the config file if they are not given.
+    ///
     /// # Errors
-    /// - `std::io::Error` when opening file fails
-    /// - `std::io::Error` (`NotFound`) when the cert/keys directories cannot be determined
-    /// - `serde_yaml::Error` when parsing config fails
+    /// - [`config::ConfigError`] when parsing config fails
+    /// - [`ConfigError::NotFound`] when the cert/keys directories cannot be determined
     pub fn read_file<P>(path: P) -> Result<Self, ConfigError>
     where
         P: AsRef<Path> + Debug,
@@ -288,12 +326,12 @@ impl Config
         Ok(config)
     }
 
-    /// Port of party `id`
+    /// Port of party `id`.
     ///
-    /// Tries to find the port in the following order
-    /// - Port given for this party (`PartyOrigin::port`)
-    /// - Port given for this config (`Config::port`)
-    /// - The default port (`DEFAULT_PORT`)
+    /// Tries to find the port in the following order:
+    /// - port given for this party ([`PartyOrigin::port`])
+    /// - port given for this config ([`Config::port`])
+    /// - the default port ([`DEFAULT_PORT`])
     #[must_use]
     pub fn port(&self, id: PartyID) -> Port
     {
@@ -304,70 +342,83 @@ impl Config
             .unwrap_or(DEFAULT_PORT)
     }
 
-    /// Server name of party `id`
+    /// Server name of party `id`.
     ///
     /// # Panics
-    /// If `id` is not in config
+    /// If `id` is not in config.
     #[must_use]
     pub fn name(&self, id: PartyID) -> &str
     {
-        &self.parties.get(&id).unwrap().name
+        self.parties.get(&id).unwrap().name.as_ref()
     }
 
-    /// Filename of `id`'s certificate
+    /// Filename of party `id`'s certificate.
+    ///
     /// # Panics
-    /// If `cert_dir` is `None`
+    /// If `cert_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn cert_filename(&self, id: PartyID) -> PathBuf
     {
         self.cert_dir.as_ref().unwrap().join(format!("{id}.x509.cert.der"))
     }
 
-    /// Filename of `id`'s certificate private key
+    /// Filename of party `id`'s certificate private key.
+    ///
     /// # Panics
-    /// If `cert_keys_dir` is `None`
+    /// If `cert_keys_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn cert_key_filename(&self, id: PartyID) -> PathBuf
     {
         self.cert_keys_dir.as_ref().unwrap().join(format!("{id}.cert-private.key.der"))
     }
 
-    /// Filename of `id`'s signature verification key
+    /// Filename of party `id`'s signature verification key.
+    ///
     /// # Panics
-    /// If `sign_verify_dir` is `None`
+    /// If `sign_verify_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn verification_key_filename(&self, id: PartyID) -> PathBuf
     {
         self.sign_verify_dir.as_ref().unwrap().join(format!("{id}.ed25519-public.key.bin"))
     }
 
-    /// Filename of `id`'s signing key
+    /// Filename of party `id`'s signing key.
+    ///
     /// # Panics
-    /// If `sign_keys_dir` is `None`
+    /// If `sign_keys_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     #[must_use]
     pub fn signing_key_filename(&self, id: PartyID) -> PathBuf
     {
         self.sign_keys_dir.as_ref().unwrap().join(format!("{id}.ed25519-private.key.der"))
     }
 
-    /// Load the certificate of party `id` from disk
+    /// Load the certificate of party `id`.
+    ///
     /// # Errors
-    /// If the file could not be read
+    /// If the file could not be read.
+    ///
     /// # Panics
-    /// If `cert_dir` is `None`
+    /// If `cert_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     pub async fn cert(&self, id: PartyID) -> Result<CertificateDer, tokio::io::Error>
     {
         let cert = tokio::fs::read(self.cert_filename(id)).await?;
         Ok(CertificateDer::from(cert))
     }
 
-    /// Load all certificates from disk
+    /// Load all certificates.
     ///
-    /// See `cert`.
+    /// See [`Self::cert`].
+    ///
     /// # Errors
-    /// See `cert`.
+    /// See [`Self::cert`].
+    ///
     /// # Panics
-    /// See `cert`.
+    /// See [`Self::cert`].
     pub async fn certs(&self) -> Result<rustls::RootCertStore, CertificateError>
     {
         let mut certs = rustls::RootCertStore::empty();
@@ -378,11 +429,14 @@ impl Config
         Ok(certs)
     }
 
-    /// Load the certificate and private key of party `id` from disk
+    /// Load the certificate and private key of party `id`.
+    ///
     /// # Errors
-    /// If the file could not be read
+    /// If the file could not be read.
+    ///
     /// # Panics
-    /// If `cert_dir` or `cert_keys_dir` is `None`
+    /// If `cert_dir` or `cert_keys_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     pub async fn cert_and_key(&self, id: PartyID) -> Result<(CertificateDer<'static>, PrivateKeyDer<'static>), tokio::io::Error>
     {
         let cert = tokio::fs::read(self.cert_filename(id)).await?;
@@ -392,11 +446,14 @@ impl Config
         Ok((cert, key))
     }
 
-    /// Load the certificate and private key of party `id` from disk
+    /// Load the certificate and private key of party `id`.
+    ///
     /// # Errors
-    /// If the file could not be read
+    /// If the file could not be read.
+    ///
     /// # Panics
-    /// If `cert_dir` or `cert_keys_dir` is `None`
+    /// If `cert_dir` or `cert_keys_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     pub fn cert_and_key_blocking(&self, id: PartyID) -> Result<(CertificateDer<'static>, PrivateKeyDer<'static>), std::io::Error>
     {
         let cert = fs::read(self.cert_filename(id))?;
@@ -406,11 +463,14 @@ impl Config
         Ok((cert, key))
     }
 
-    /// Load the verification key of party `id` from disk
+    /// Load the verification key of party `id`.
+    ///
     /// # Errors
-    /// If the file could not be read
+    /// If the file could not be read.
+    ///
     /// # Panics
-    /// If `sign_verify_dir` is `None`
+    /// If `sign_verify_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     #[cfg(feature = "signing")]
     pub async fn verification_key(&self, id: PartyID) -> Result<PublicKey, tokio::io::Error>
     {
@@ -418,11 +478,13 @@ impl Config
         Ok(PublicKey::new(key))
     }
 
-    /// Load the verification keys from disk
+    /// Load all verification keys.
+    ///
     /// # Errors
-    /// See `verification_key`.
+    /// See [`Self::verification_key`].
+    ///
     /// # Panics
-    /// See `verification_key`.
+    /// See [`Self::verification_key`].
     #[cfg(feature = "signing")]
     pub async fn verification_keys(&self) -> Result<HashMap<PartyID, PublicKey>, tokio::io::Error>
     {
@@ -435,11 +497,14 @@ impl Config
         Ok(keys)
     }
 
-    /// Load the signing key of party `id` from disk
+    /// Load the signing key of party `id`.
+    ///
     /// # Errors
-    /// If the file could not be read or the key is rejected
+    /// If the file could not be read or the key is rejected.
+    ///
     /// # Panics
-    /// If `sign_keys_dir` is `None`
+    /// If `sign_keys_dir` is `None`.
+    /// This should not happen with a properly constructed [`Config`].
     #[cfg(feature = "signing")]
     pub async fn signing_key(&self, id: PartyID) -> Result<PrivateKey, tokio::io::Error>
     {
@@ -449,7 +514,7 @@ impl Config
 }
 
 
-/// Returns the config path from the environment (if available)
+/// Returns the config path from the environment (if available).
 #[must_use]
 pub fn path_from_env() -> Option<PathBuf>
 {
@@ -457,14 +522,14 @@ pub fn path_from_env() -> Option<PathBuf>
         .map_or(None, |config| Some(PathBuf::from(config)))
 }
 
-/// Returns the fallback config path
+/// Returns the fallback config path ([`DEFAULT_PATH`]).
 #[must_use]
 pub fn fallback_path() -> PathBuf
 {
     PathBuf::from(DEFAULT_PATH)
 }
 
-/// Returns the config path from the environment (if available) or the fallback path
+/// Returns the config path from the environment (if available) or the fallback path.
 #[must_use]
 pub fn default_path() -> PathBuf
 {

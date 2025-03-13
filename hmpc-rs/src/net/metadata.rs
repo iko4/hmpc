@@ -1,14 +1,19 @@
 use super::ptr::ReadData;
 use super::{Communicator, MessageDatatype, MessageID, MessageKind, MessageSize, PartyID};
 
-pub(crate) trait BaseMessageID
+/// Trait to get all information for deriving a message ID (message king, message datatype, communicator, and relevant metadata).
+pub(crate) trait ToMessageID
 {
+    /// The message kind.
     const KIND: MessageKind;
 
+    /// The message datatype.
     fn datatype(&self) -> MessageDatatype;
 
+    /// Hash all remaining metadata for this message type.
     fn hash_metadata(&self, hash: &mut ring::digest::Context);
 
+    /// Hash a communicator.
     fn hash_communicator(communicator: &Communicator, hash: &mut ring::digest::Context)
     {
         let len = communicator.len() as u64;
@@ -19,6 +24,7 @@ pub(crate) trait BaseMessageID
         }
     }
 
+    /// Hash `self` and communicators to derive the message ID.
     fn hash(&self, senders: &Communicator, receivers: &Communicator) -> ring::digest::Digest
     {
         let mut sha = ring::digest::Context::new(&ring::digest::SHA256);
@@ -28,24 +34,39 @@ pub(crate) trait BaseMessageID
 
         sha.finish()
     }
+}
 
-    #[cfg(feature = "collective-consistency")]
+/// Trait to convert to a generic [`Message`].
+pub(crate) trait ToMessage
+{
+    /// Perform the conversion.
+    fn to_message(self, sender: PartyID, receiver: PartyID, id: MessageID) -> Message;
+}
+
+/// Trait to convert to the corresponding [`ConsistencyCheck`].
+#[cfg(feature = "collective-consistency")]
+pub(crate) trait ToConsistencyCheck
+{
+    /// Perform the conversion.
+    fn to_consistency_check(&self, sender: PartyID, receivers: Communicator, id: MessageID) -> ConsistencyCheck;
+}
+
+#[cfg(feature = "collective-consistency")]
+impl<T> ToConsistencyCheck for T
+where
+    T: ToMessageID,
+{
     fn to_consistency_check(&self, sender: PartyID, receivers: Communicator, id: MessageID) -> ConsistencyCheck
     {
         ConsistencyCheck { kind: Self::KIND, datatype: self.datatype(), sender, receivers, id }
     }
 }
 
-pub(crate) trait ToMessage
-{
-    fn to_message(self, sender: PartyID, receiver: PartyID, id: MessageID) -> Message;
-}
-
 macro_rules! message
 {
     ($t:ident $(, $($member:ident),+ $(,)?)? ) =>
     {
-        impl BaseMessageID for &$t
+        impl ToMessageID for &$t
         {
             const KIND: MessageKind = MessageKind::$t;
 
@@ -70,12 +91,13 @@ macro_rules! message
         {
             fn to_message(self, sender: PartyID, receiver: PartyID, id: MessageID) -> Message
             {
-                Message { kind: <Self as BaseMessageID>::KIND, datatype: self.datatype, sender, receiver, id, size: self.size }
+                Message { kind: <Self as ToMessageID>::KIND, datatype: self.datatype, sender, receiver, id, size: self.size }
             }
         }
     };
 }
 
+/// Generic message metadata.
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct Message
 {
@@ -95,10 +117,10 @@ impl Message
         Self { kind, datatype, sender, receiver, id, size }
     }
 
-    /// Build usable slice from data pointer
+    /// Build usable slice from data pointer.
     ///
     /// # Panics
-    /// If message is too long for the current hardware platform (size cannot be represented in `usize`)
+    /// If message is too long for the current hardware platform (size cannot be represented in `usize`).
     #[must_use]
     pub fn data_as_slice(&self, ptr: &ReadData) -> &[u8]
     {
@@ -106,6 +128,7 @@ impl Message
     }
 }
 
+/// Broadcast operation metadata.
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub struct Broadcast
@@ -124,6 +147,7 @@ impl Broadcast
 }
 message!(Broadcast, sender);
 
+/// Gather operation metadata.
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub struct Gather
@@ -142,6 +166,7 @@ impl Gather
 }
 message!(Gather, receiver);
 
+/// All-gather operation metadata.
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub struct AllGather
@@ -159,6 +184,7 @@ impl AllGather
 }
 message!(AllGather);
 
+/// All-to-all operation metadata.
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub struct AllToAll
@@ -176,6 +202,7 @@ impl AllToAll
 }
 message!(AllToAll);
 
+/// Consistency check message metadata.
 #[cfg(feature = "collective-consistency")]
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct ConsistencyCheck

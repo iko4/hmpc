@@ -28,28 +28,41 @@ use self::errors::{ClientError, FromPrimitiveError, ServerError};
 #[cfg(feature = "signing")]
 use self::hash::hash;
 #[cfg(feature = "collective-consistency")]
-use self::hash::{Hash, HASH_SIZE};
+use self::hash::{HASH_SIZE, Hash};
 pub use self::queue::Queue;
 #[cfg(feature = "collective-consistency")]
 use self::sign::Signature;
 #[cfg(feature = "signing")]
 use self::sign::{PrivateKey, PublicKey, SIGNATURE_SIZE};
 
+/// Number of bytes for the session ID.
 const SESSION_ID_SIZE: usize = 128 / 8; // 128 bit => [u8; 16]
 
+/// Maximum number of bytes for a message payload.
 const MESSAGE_SIZE_LIMIT: usize = 2 << 32;
 
-const MESSAGE_FORMAT_VERSION: u8 = 0;
+/// Message format version.
+///
+/// If the binary layout of messages changes in the future, the version can be used to determine if the format is compatible and which format to use/expect.
+const MESSAGE_FORMAT_VERSION: MessageFormat = 0;
 
+/// Message feature flags.
+///
+/// In addition to the message format version, certain features cause changes to the binary layout of messages.
+/// To indicate which of these features are enabled, the corresponding "flags" are part of each message.
 #[rustfmt::skip]
-const MESSAGE_FEATURE_FLAGS: u8 = {
+const MESSAGE_FEATURE_FLAGS: MessageFlags = {
     let session_flag = cfg!(feature = "sessions") as u8;
     let signing_flag = cfg!(feature = "signing") as u8;
     session_flag
         | (signing_flag << 1)
 };
 
-pub type PartyID = u16;
+/// Message kind.
+///
+/// The message kind indicates what kind of message is sent.
+/// This mostly corresponds to different (collective) communication operations.
+/// Also, verification messages and other meta messages could be indicated by this.
 #[repr(u8)]
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub enum MessageKind
@@ -114,7 +127,9 @@ pub enum MessageKind
     ConsistencyCheckAllGather = 21,
 }
 
+/// Underlying fundamental datatype for [`MessageKind`].
 type MessageKindUnderlying = u8;
+const _: () = assert!(size_of::<MessageKind>() == size_of::<MessageKindUnderlying>());
 
 impl TryFrom<MessageKindUnderlying> for MessageKind
 {
@@ -140,17 +155,20 @@ impl MessageKind
 {
     const BYTE_SIZE: usize = size_of::<MessageKindUnderlying>();
 
+    /// Convert to bytes (for sending over network).
     fn to_le_bytes(self) -> [u8; Self::BYTE_SIZE]
     {
         (self as MessageKindUnderlying).to_le_bytes()
     }
 
+    /// Convert from bytes (from network). Fails if the underlying value does not encode a valid [`MessageKind`] value.
     fn try_from_le_bytes(bytes: [u8; Self::BYTE_SIZE]) -> Result<Self, FromPrimitiveError>
     {
         let value = MessageKindUnderlying::from_le_bytes(bytes);
         value.try_into()
     }
 
+    /// Indicates whether this kind of message has a corresponding consistency check.
     fn needs_check(self) -> bool
     {
         match self
@@ -160,6 +178,7 @@ impl MessageKind
         }
     }
 
+    /// Indicates whether this kind of message is used for a consistency check.
     fn is_consistency_check(self) -> bool
     {
         match self
@@ -169,6 +188,7 @@ impl MessageKind
         }
     }
 
+    /// Gets the corresponding consistency check [`MessageKind`] if possible.
     fn try_to_check(self) -> Result<Self, ()>
     {
         match self
@@ -179,6 +199,7 @@ impl MessageKind
         }
     }
 
+    /// Gets the corresponding [`MessageKind`] to be checked if possible.
     fn try_from_check(self) -> Result<Self, ()>
     {
         match self
@@ -190,17 +211,28 @@ impl MessageKind
     }
 }
 
+/// Underlying datatype for party IDs.
+pub type PartyID = u16;
+/// Underlying datatype for message format version.
 pub type MessageFormat = u8;
+/// Underlying datatype for message format flags.
 pub type MessageFlags = u8;
+/// Underlying datatype to indicate message payload datatype.
 pub type MessageDatatype = u8;
+/// Underlying datatype for message IDs.
 pub type MessageID = u64;
+/// Underlying datatype for message payload size.
 pub type MessageSize = u64;
+/// Container to store (incoming) message payloads.
 pub type OwnedData = Vec<u8>;
+/// Underlying datatype for session IDs.
 pub type SessionID = u128;
 const _: () = assert!(SESSION_ID_SIZE == size_of::<SessionID>());
 
+/// Communicator of parties.
 type Communicator = BTreeSet<PartyID>;
 
+/// Message to be sent out.
 #[derive(Debug)]
 pub struct SendMessage
 {
@@ -209,6 +241,7 @@ pub struct SendMessage
 }
 impl SendMessage
 {
+    /// Write message to stream.
     async fn write_to(self, #[cfg(feature = "sessions")] session: SessionID, #[cfg(feature = "signing")] signing_key: &PrivateKey, stream: &mut SendStream) -> Result<(), WriteError>
     {
         let data = self.metadata.data_as_slice(&self.data);
@@ -257,11 +290,14 @@ impl SendMessage
 }
 unsafe impl Send for SendMessage {}
 
+/// Result of parsing a message from a stream.
 #[cfg(not(feature = "collective-consistency"))]
 type ReadResult = ReceiveMessage;
+/// Result of parsing a message from a stream.
 #[cfg(feature = "collective-consistency")]
 type ReadResult = (ReceiveMessage, Signature);
 
+/// Message received from the network.
 #[derive(Debug)]
 pub struct ReceiveMessage
 {
@@ -275,6 +311,7 @@ impl ReceiveMessage
         Self { metadata: metadata::Message::new(message_kind, datatype, sender, receiver, message_id, data.len() as MessageSize), data }
     }
 
+    /// After reading raw bytes from a stream, build a message object (if possible).
     fn build_from(#[cfg(feature = "sessions")] session: SessionID, message: &[u8]) -> Result<Self, ServerError>
     {
         const MESSAGE_FORMAT_VERSION_SIZE: usize = size_of::<MessageFormat>();
@@ -342,6 +379,7 @@ impl ReceiveMessage
         Ok(Self::new(message_kind, datatype, sender, receiver, message_id, data))
     }
 
+    /// Read message from stream.
     #[cfg(feature = "signing")]
     async fn read_from(#[cfg(feature = "sessions")] session: SessionID, verification_keys: &HashMap<PartyID, PublicKey>, stream: &mut RecvStream) -> Result<ReadResult, ServerError>
     {
@@ -397,6 +435,7 @@ impl ReceiveMessage
         }
     }
 
+    /// Read message from stream.
     #[cfg(not(feature = "signing"))]
     async fn read_from(#[cfg(feature = "sessions")] session: SessionID, stream: &mut RecvStream) -> Result<ReadResult, ServerError>
     {
@@ -410,7 +449,9 @@ impl ReceiveMessage
     }
 }
 
-
+/// Consistency check message.
+///
+/// This is either received from the network (incoming) or constructed locally to check future incoming messages.
 #[cfg(feature = "collective-consistency")]
 #[derive(Debug)]
 pub(crate) struct ConsistencyCheckMessage
@@ -465,41 +506,54 @@ impl TryFrom<(&ReceiveMessage, Signature)> for ConsistencyCheckMessage
     }
 }
 
+/// Command for the [`message_buffer`].
+///
+/// Indicates that we want to receive a message or that a message was received.
 #[derive(Debug)]
 pub enum DataCommand
 {
-    /// Want to obtain data for this
+    /// Want to obtain data for this message.
     Receive(metadata::Message, tokio::sync::oneshot::Sender<OwnedData>),
-    /// Received data from network
+    /// Received data from network.
     Received(ReceiveMessage),
 }
+/// Channel to send a [`DataCommand`] to the [`message_buffer`].
 type DataChannel = tokio::sync::mpsc::Sender<DataCommand>;
 
+/// Command for the [`client`].
+///
+/// Indicates that we want to send a message.
 #[derive(Debug)]
 pub enum NetCommand
 {
+    /// Want to send a message.
     Send(SendMessage, tokio::sync::oneshot::Sender<Result<(), ClientError>>),
+    /// Want to send a consistency check.
     #[cfg(feature = "collective-consistency")]
     SendCheck(SendMessage, PartyID, tokio::sync::oneshot::Sender<Result<(), ClientError>>),
 }
+/// Channel to send a [`NetCommand`] to the [`client`].
 type NetChannel = tokio::sync::mpsc::Sender<NetCommand>;
 
+/// Command for the [`consistency`] checking.
 #[cfg(feature = "collective-consistency")]
 #[derive(Debug)]
 pub(crate) enum ConsistencyCheckCommand
 {
-    /// Want to check consistency for this
+    /// Want to check consistency for this message.
     Request(metadata::ConsistencyCheck),
-    /// Received check message from network
+    /// Received check message from network.
     ReceivedCheck(ConsistencyCheckMessage),
-    /// Received data to check from network
+    /// Received data to check from network.
     ReceivedData(ConsistencyCheckMessage),
-    /// Wait for all consistency checks to be finished
+    /// Wait for all consistency checks to be finished.
     Wait(tokio::sync::oneshot::Sender<Result<(), ConsistencyCheckError>>),
 }
+/// Channel to send a [`ConsistencyCheckCommand`] to the [`consistency`] checking.
 #[cfg(feature = "collective-consistency")]
 type ConsistencyCheckChannel = tokio::sync::mpsc::Sender<ConsistencyCheckCommand>;
 
+/// Map a party ID to an IP address.
 fn make_addr(id: PartyID, config: &Config) -> SocketAddr
 {
     let name = config.name(id);

@@ -6,6 +6,7 @@ use crate::net::errors::ConsistencyCheckError;
 use crate::net::errors::SignatureError;
 use crate::net::errors::{ClientError, ReceiveError, SendError, SendReceiveError, ServerError};
 
+/// Error code for sending message.
 #[repr(u8)]
 #[derive(Debug)]
 #[must_use]
@@ -37,7 +38,8 @@ pub enum SendErrc
 
 impl From<ConnectError> for SendErrc
 {
-    fn from(value: ConnectError) -> Self {
+    fn from(value: ConnectError) -> Self
+    {
         match value
         {
             ConnectError::EndpointStopping => Self::EndpointStopped,
@@ -89,6 +91,7 @@ impl From<SendError> for SendErrc
     }
 }
 
+/// Error code for receiving message.
 #[repr(u8)]
 #[derive(Debug)]
 #[must_use]
@@ -206,6 +209,7 @@ impl From<ReceiveError> for ReceiveErrc
     }
 }
 
+/// Error code for send-receive communication operations.
 #[repr(u8)]
 #[derive(Debug)]
 #[must_use]

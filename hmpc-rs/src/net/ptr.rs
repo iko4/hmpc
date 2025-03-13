@@ -3,10 +3,14 @@ use std::ptr::NonNull;
 
 pub type Nullable<T> = Option<NonNull<T>>;
 
+/// Pointer to data from foreign code.
 pub type Data = *mut c_void;
+/// Non-null pointer to data from foreign code.
 pub type NonNullData = NonNull<c_void>;
+/// Pointer to data from foreign code.
 pub type NullableData = Nullable<c_void>;
 
+/// Pointer to read-only data.
 #[derive(Debug, Clone)]
 pub struct ReadData
 {
@@ -14,12 +18,14 @@ pub struct ReadData
 }
 impl ReadData
 {
+    /// Create new [`ReadData`] pointer without checking the input for null or any other kind of validity.
     #[must_use]
     pub fn new_unchecked(ptr: *const u8) -> Self
     {
         Self { ptr }
     }
 
+    /// Get the contained raw pointer.
     #[must_use]
     pub fn as_ptr(&self) -> *const u8
     {
@@ -35,6 +41,7 @@ impl From<NonNullData> for ReadData
     }
 }
 
+/// Pointer to write-only data.
 #[derive(Debug)]
 pub struct WriteData
 {
@@ -42,6 +49,7 @@ pub struct WriteData
 }
 impl WriteData
 {
+    /// Get the contained raw pointer.
     #[must_use]
     pub fn as_ptr(&self) -> *mut u8
     {

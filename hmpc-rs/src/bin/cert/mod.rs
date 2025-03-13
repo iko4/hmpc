@@ -8,7 +8,7 @@ use rcgen::{CertificateParams, KeyPair, PKCS_ED25519};
 use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 
-use super::{verbose_info, verbose_warn, Cert, Common};
+use super::{Cert, Common, verbose_info, verbose_warn};
 use crate::sign::create_or_check_signing_files;
 
 

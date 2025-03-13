@@ -1,8 +1,9 @@
-use std::ffi::{c_char, CStr};
+use std::ffi::{CStr, c_char};
 
 use log::{debug, error};
 
 use super::{check_mut_pointer, check_pointer, free_nullable, nullable};
+use crate::ffi::set_logger;
 use crate::net::config::{Config, Session};
 use crate::net::ptr::Nullable;
 
@@ -32,18 +33,21 @@ macro_rules! path_from_string
     };
 }
 
-/// Read a config file
+/// Construct a [`Config`] object from file.
 ///
-/// This tries to find a config path in the following order
+/// This tries to find a config path in the following order:
 /// - the provided path (if not `nullptr`)
 /// - the environment
 /// - the hard-coded fallback config path
+/// Also sets the global logger to a (defaulted) [`env_logger`].
 ///
 /// # Safety
 /// The `config` pointer has to be a valid null-terminated C-string or `nullptr`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_read(config: *const c_char) -> Nullable<Config>
 {
+    set_logger();
+
     debug!("Read config");
     path_from_string!(config);
 
@@ -58,18 +62,21 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_read(config: *const c_char) -> Null
     }
 }
 
-/// Read a config file
+/// Construct a [`Config`] object from file.
 ///
-/// This tries to find a config path in the following order
+/// This tries to find a config path in the following order:
 /// - the environment
 /// - the provided path (if not `nullptr`)
 /// - the hard-coded fallback config path
+/// Also sets the global logger to a (defaulted) [`env_logger`].
 ///
 /// # Safety
 /// The `config` pointer has to be a valid null-terminated C-string or `nullptr`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_read_env(config: *const c_char) -> Nullable<Config>
 {
+    set_logger();
+
     debug!("Read config with precedence from environment");
     path_from_string!(config);
 
@@ -84,12 +91,13 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_read_env(config: *const c_char) -> 
     }
 }
 
-/// Update the session ID of a config to values set by environment variables (if possible)
+/// Update the session ID of a config to values set by environment variables (if possible).
 ///
 /// Returns `true` if some value is set by an environment variable, `false` otherwise.
 ///
 /// # Safety
-/// The `config` pointer has to be valid. (The function only checks for `nullptr`.)
+/// The `config` pointer has to be valid.
+/// (The function only checks for `nullptr`.)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_session_from_env(config: Nullable<Config>) -> bool
 {
@@ -117,11 +125,11 @@ pub unsafe extern "C" fn hmpc_ffi_net_config_session_from_env(config: Nullable<C
     }
 }
 
-/// Drop a `Config` object and free its memory
+/// Drop a [`Config`] object and free its memory.
 ///
 /// # Safety
-/// This function frees the passed pointer with `Box::from_raw`.
-/// As a caller, ensure that the pointer actually comes from a `Box` and is not freed multiple times.
+/// This function frees the passed pointer with [`Box::from_raw`].
+/// As a caller, ensure that the pointer actually comes from a [`Box`] and is not freed multiple times.
 /// This function only checks for `nullptr` but cannot do any other checks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn hmpc_ffi_net_config_free(config: Nullable<Config>)

@@ -2,9 +2,21 @@ use std::ptr::NonNull;
 
 use log::debug;
 
+/// FFI config module.
+///
+/// Wraps [`crate::net::config`].
 mod config;
+/// FFI error module.
+///
+/// Converts errors to error codes.
 mod errors;
+/// FFI queue module.
+///
+/// Wraps [`crate::net::queue`].
 mod queue;
+/// FFI span module.
+///
+/// Provides spans to accept [`Vec`]-like and [`Vec2d`]-like data structures from foreign code.
 mod span;
 
 pub use self::span::{Span, Span2d};
@@ -97,6 +109,7 @@ macro_rules! check_size_eq
     };
 }
 
+/// Wrap an object as nullable (`Option<NonNull<T>>`).
 #[allow(clippy::unnecessary_wraps)]
 fn nullable<T>(x: T) -> Nullable<T>
 {
@@ -118,6 +131,8 @@ macro_rules! free_nullable
 
 pub(crate) use {check_communicator, check_mut_pointer, check_non_null_vec, check_pointer, check_size_eq, check_span, check_vec, free_nullable};
 
+/// Install an [`env_logger`] if possible.
+/// This should be called as first call on FFI functions that create objects.
 fn set_logger()
 {
     #[rustfmt::skip]

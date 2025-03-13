@@ -9,13 +9,20 @@ use tokio::task::JoinSet;
 use super::config::CHANNEL_CAPACITY;
 use super::errors::{QueueError, ReceiveError, SendError, SendReceiveError, ServerError, SizeMismatchError};
 use super::hash::Hash;
-use super::metadata::{self, AllGather, AllToAll, BaseMessageID, Broadcast, Gather, ToMessage};
-use super::ptr::{NonNullData, ReadData, WriteData};
-use super::{client, message_buffer, server, Communicator, Config, DataChannel, DataCommand, MessageDatatype, MessageID, MessageKind, MessageSize, NetChannel, NetCommand, PartyID, SendMessage};
 #[cfg(feature = "collective-consistency")]
-use super::{consistency, ConsistencyCheckChannel, ConsistencyCheckCommand};
+use super::metadata::ToConsistencyCheck;
+use super::metadata::{self, AllGather, AllToAll, Broadcast, Gather, ToMessage, ToMessageID};
+use super::ptr::{NonNullData, ReadData, WriteData};
+use super::{Communicator, Config, DataChannel, DataCommand, MessageDatatype, MessageID, MessageKind, MessageSize, NetChannel, NetCommand, PartyID, SendMessage, client, message_buffer, server};
+#[cfg(feature = "collective-consistency")]
+use super::{ConsistencyCheckChannel, ConsistencyCheckCommand, consistency};
 use crate::vec::Vec2d;
 
+/// Network statistics.
+///
+/// Includes the numb of bytes sent and received, as well as the number of communication rounds.
+/// Only data payload bytes are counted.
+/// For the rounds, every call to methods of [`Queue`] are counted.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct NetworkStatistics
@@ -24,7 +31,6 @@ pub struct NetworkStatistics
     received: MessageSize,
     rounds: MessageSize,
 }
-
 impl NetworkStatistics
 {
     #[must_use]
@@ -41,6 +47,10 @@ impl Default for NetworkStatistics
     }
 }
 
+/// Check if both values are the same if represented as [`MessageSize`].
+///
+/// # Errors
+/// If the values mismatch.
 fn check_size(x: usize, y: MessageSize) -> Result<(), SizeMismatchError>
 {
     let x = x as MessageSize;
@@ -54,6 +64,10 @@ fn check_size(x: usize, y: MessageSize) -> Result<(), SizeMismatchError>
     }
 }
 
+/// Wait for all tasks to finish.
+///
+/// # Errors
+/// If joining failed or if some individual task failed.
 async fn collect_tasks<E>(mut tasks: JoinSet<Result<(), E>>) -> Result<(), SendReceiveError>
 where
     SendReceiveError: From<E>,
@@ -77,20 +91,20 @@ where
             },
         };
 
-        if let Ok(()) = result
+        result = match (&result, &new_result)
         {
-            result = new_result;
-        }
-        else
-        {
-            result = Err(SendReceiveError::Multiple);
-        }
+            (_, Ok(_)) => result,
+            (Ok(_), Err(_)) => new_result,
+            (Err(_), Err(_)) => Err(SendReceiveError::Multiple),
+        };
     }
     result
 }
 
-type CounterKey = Hash;
+/// For what we track unique counters: All (message kind, data type, hashed message metadata) tuples.
+type CounterKey = (MessageKind, MessageDatatype, Hash);
 
+/// Internal [`Queue`] state.
 #[derive(Debug)]
 struct QueueState
 {
@@ -99,41 +113,44 @@ struct QueueState
     net_channel: NetChannel,
     #[cfg(feature = "collective-consistency")]
     consistency_channel: ConsistencyCheckChannel,
-    counters: HashMap<(MessageKind, MessageDatatype, CounterKey), MessageID>,
+    counters: HashMap<CounterKey, MessageID>,
     #[cfg(feature = "statistics")]
     network_statistics: NetworkStatistics,
 }
-
 impl QueueState
 {
-    fn update_counter(&mut self, kind: MessageKind, datatype: MessageDatatype, key: CounterKey) -> MessageID
+    /// Create or increment counter for message IDs.
+    fn update_counter(&mut self, kind: MessageKind, datatype: MessageDatatype, hash: Hash) -> MessageID
     {
         const MESSAGE_ID_SIZE: usize = size_of::<MessageID>();
-        const _: () = assert!(MESSAGE_ID_SIZE <= size_of::<CounterKey>());
+        const _: () = assert!(MESSAGE_ID_SIZE <= size_of::<Hash>());
 
         // PANICS: Assert above checks that array is large enough
-        let id = key.first_chunk::<MESSAGE_ID_SIZE>().unwrap();
+        let id = hash.first_chunk::<MESSAGE_ID_SIZE>().unwrap();
         let id = MessageID::from_le_bytes(*id);
 
-        let counter = *self.counters.entry((kind, datatype, key))
+        let counter = *self.counters.entry((kind, datatype, hash))
             .and_modify(|c| *c += 1)
             .or_insert(1);
 
         id + counter
     }
 
-    fn next_message_id<Message: BaseMessageID>(&mut self, message: Message, communicator: &Communicator) -> MessageID
+    /// Get next message ID for non-extended communication operation.
+    fn next_message_id<Message: ToMessageID>(&mut self, message: Message, communicator: &Communicator) -> MessageID
     {
         self.extended_next_message_id(message, communicator, communicator)
     }
 
-    fn extended_next_message_id<Message: BaseMessageID>(&mut self, message: Message, senders: &Communicator, receivers: &Communicator) -> MessageID
+    /// Get next message ID for extended communication operation.
+    fn extended_next_message_id<Message: ToMessageID>(&mut self, message: Message, senders: &Communicator, receivers: &Communicator) -> MessageID
     {
         let key = message.hash(senders, receivers).as_ref().try_into().unwrap();
 
         self.update_counter(Message::KIND, message.datatype(), key)
     }
 
+    /// Register a consistency check via [`consistency`].
     #[cfg(feature = "collective-consistency")]
     async fn check_consistency(&mut self, check: metadata::ConsistencyCheck)
     {
@@ -143,6 +160,7 @@ impl QueueState
             .expect("Consistency check unavailable");
     }
 
+    /// Wait for all registered consistency checks to finish.
     #[cfg(feature = "collective-consistency")]
     async fn ensure_consistency(&mut self) -> Result<(), ReceiveError>
     {
@@ -155,6 +173,7 @@ impl QueueState
         Ok(())
     }
 
+    /// Send a message via [`client`].
     async fn send_message(net_channel: tokio::sync::mpsc::Sender<NetCommand>, message: metadata::Message, data: ReadData) -> Result<(), SendError>
     {
         let (send_answer, receive_answer) = tokio::sync::oneshot::channel();
@@ -165,6 +184,7 @@ impl QueueState
         Ok(())
     }
 
+    /// Obtain a message via [`message_buffer`].
     async fn receive_message(data_channel: tokio::sync::mpsc::Sender<DataCommand>, message: metadata::Message, data: WriteData) -> Result<(), ReceiveError>
     {
         let (send_answer, receive_answer) = tokio::sync::oneshot::channel();
@@ -176,6 +196,9 @@ impl QueueState
         Ok(())
     }
 
+    /// Asynchronously send a message on `tasks`.
+    ///
+    /// See [`Self::send_message`].
     fn send_on<E>(&mut self, tasks: &mut JoinSet<Result<(), E>>, handle: &Handle, message: metadata::Message, data: NonNullData)
     where
         E: From<SendError> + Send + 'static,
@@ -193,6 +216,9 @@ impl QueueState
         }, handle);
     }
 
+    /// Asynchronously obtain a message on `tasks`.
+    ///
+    /// See [`Self::receive_message`].
     fn receive_on<E>(&mut self, tasks: &mut JoinSet<Result<(), E>>, handle: &Handle, message: metadata::Message, data: NonNullData)
     where
         E: From<ReceiveError> + Send + 'static,
@@ -210,11 +236,13 @@ impl QueueState
         }, handle);
     }
 
+    /// Broadcast.
     pub(crate) async fn broadcast(&mut self, handle: &Handle, message: Broadcast, communicator: &Communicator, data: NonNullData) -> Result<(), SendReceiveError>
     {
         self.multi_broadcast(handle, vec![message], communicator, vec![data]).await
     }
 
+    /// Multi broadcast.
     pub(crate) async fn multi_broadcast(&mut self, handle: &Handle, messages: Vec<Broadcast>, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         assert_eq!(messages.len(), data.len());
@@ -262,11 +290,13 @@ impl QueueState
         collect_tasks(tasks).await
     }
 
+    /// Gather.
     pub(crate) async fn gather(&mut self, handle: &Handle, message: Gather, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.multi_gather(handle, vec![message], communicator, Vec2d::from_inner(data)).await
     }
 
+    /// Multi gather.
     pub(crate) async fn multi_gather(&mut self, handle: &Handle, messages: Vec<Gather>, communicator: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         assert_eq!(messages.len(), data.outer_extent());
@@ -306,21 +336,25 @@ impl QueueState
         collect_tasks(tasks).await
     }
 
+    /// All-gather.
     pub(crate) async fn all_gather(&mut self, handle: &Handle, message: AllGather, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.extended_all_gather(handle, message, communicator, communicator, data).await
     }
 
+    /// Multi all-gather.
     pub(crate) async fn multi_all_gather(&mut self, handle: &Handle, messages: Vec<AllGather>, communicator: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.extended_multi_all_gather(handle, messages, communicator, communicator, data).await
     }
 
+    /// Extended all-gather.
     pub(crate) async fn extended_all_gather(&mut self, handle: &Handle, message: AllGather, senders: &Communicator, receivers: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.extended_multi_all_gather(handle, vec![message], senders, receivers, Vec2d::from_inner(data)).await
     }
 
+    /// Extended multi all-gather.
     pub(crate) async fn extended_multi_all_gather(&mut self, handle: &Handle, messages: Vec<AllGather>, senders: &Communicator, receivers: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         assert_eq!(senders.len(), data.inner_extent());
@@ -375,11 +409,13 @@ impl QueueState
         collect_tasks(tasks).await
     }
 
+    /// All-to-all.
     pub(crate) async fn all_to_all(&mut self, handle: &Handle, message: AllToAll, communicator: &Communicator, send_data: Vec<NonNullData>, receive_data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.multi_all_to_all(handle, vec![message], communicator, Vec2d::from_inner(send_data), Vec2d::from_inner(receive_data)).await
     }
 
+    /// Multi all-to-all.
     pub(crate) async fn multi_all_to_all(&mut self, handle: &Handle, messages: Vec<AllToAll>, communicator: &Communicator, send_data: Vec2d<NonNullData>, receive_data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         assert_eq!(communicator.len(), send_data.inner_extent());
@@ -414,18 +450,22 @@ impl QueueState
     }
 }
 
+/// Networking queue.
+///
+/// Allows various (collective) communication operations.
+/// With the "collective-consistency" feature enabled, also ensures that all messages were consistent before *sending* more messages.
 #[derive(Debug)]
 pub struct Queue
 {
     runtime: tokio::runtime::Runtime,
     state: QueueState,
 }
-
 impl Queue
 {
-    /// Construct a `Queue` managing a `tokio` runtime
+    /// Construct a `Queue` managing a `tokio` runtime.
     ///
     /// This also spawns multiple tasks to handle incoming and outgoing messages.
+    ///
     /// # Errors
     /// Fails if the `tokio` runtime cannot be constructed.
     /// Then, the errors are simply forwarded to the caller.
@@ -503,172 +543,194 @@ impl Queue
         self.state.id
     }
 
-    /// Broadcast
+    /// Broadcast.
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub async fn broadcast(&mut self, message: Broadcast, communicator: &Communicator, data: NonNullData) -> Result<(), SendReceiveError>
     {
         self.state.broadcast(self.runtime.handle(), message, communicator, data).await
     }
 
-    /// Broadcast (blocking)
+    /// Broadcast (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub fn broadcast_blocking(&mut self, message: Broadcast, communicator: &Communicator, data: NonNullData) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.broadcast(self.runtime.handle(), message, communicator, data))
     }
 
-    /// Multi broadcast
+    /// Multi broadcast.
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub async fn multi_broadcast(&mut self, messages: Vec<Broadcast>, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.multi_broadcast(self.runtime.handle(), messages, communicator, data).await
     }
 
-    /// Multi broadcast (blocking)
+    /// Multi broadcast (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub fn multi_broadcast_blocking(&mut self, messages: Vec<Broadcast>, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.multi_broadcast(self.runtime.handle(), messages, communicator, data))
     }
 
-    /// Gather
+    /// Gather.
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub async fn gather(&mut self, message: Gather, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.gather(self.runtime.handle(), message, communicator, data).await
     }
 
-    /// Gather (blocking)
+    /// Gather (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub fn gather_blocking(&mut self, message: Gather, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.gather(self.runtime.handle(), message, communicator, data))
     }
 
-    /// Multi gather
+    /// Multi gather.
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub async fn multi_gather(&mut self, messages: Vec<Gather>, communicator: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.multi_gather(self.runtime.handle(), messages, communicator, data).await
     }
 
-    /// Multi gather (blocking)
+    /// Multi gather (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending or receiving
+    /// Forwards errors from sending or receiving.
     pub fn multi_gather_blocking(&mut self, messages: Vec<Gather>, communicator: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.multi_gather(self.runtime.handle(), messages, communicator, data))
     }
 
-    /// All-gather
+    /// All-gather.
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub async fn all_gather(&mut self, message: AllGather, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.all_gather(self.runtime.handle(), message, communicator, data).await
     }
 
-    /// All-gather (blocking)
+    /// All-gather (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub fn all_gather_blocking(&mut self, message: AllGather, communicator: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.all_gather(self.runtime.handle(), message, communicator, data))
     }
 
-    /// Multi all-gather
+    /// Multi all-gather.
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub async fn multi_all_gather(&mut self, messages: Vec<AllGather>, communicator: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.multi_all_gather(self.runtime.handle(), messages, communicator, data).await
     }
 
-    /// Multi all-gather (blocking)
+    /// Multi all-gather (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub fn multi_all_gather_blocking(&mut self, messages: Vec<AllGather>, communicator: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.multi_all_gather(self.runtime.handle(), messages, communicator, data))
     }
 
-    /// Extended all-gather
+    /// Extended all-gather.
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub async fn extended_all_gather(&mut self, message: AllGather, senders: &Communicator, receivers: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.extended_all_gather(self.runtime.handle(), message, senders, receivers, data).await
     }
 
-    /// Extended all-gather (blocking)
+    /// Extended all-gather (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub fn extended_all_gather_blocking(&mut self, message: AllGather, senders: &Communicator, receivers: &Communicator, data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.extended_all_gather(self.runtime.handle(), message, senders, receivers, data))
     }
 
-    /// Extended multi all-gather
+    /// Extended multi all-gather.
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub async fn extended_multi_all_gather(&mut self, messages: Vec<AllGather>, senders: &Communicator, receivers: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.extended_multi_all_gather(self.runtime.handle(), messages, senders, receivers, data).await
     }
 
-    /// Extended multi all-gather (blocking)
+    /// Extended multi all-gather (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub fn extended_multi_all_gather_blocking(&mut self, messages: Vec<AllGather>, senders: &Communicator, receivers: &Communicator, data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.extended_multi_all_gather(self.runtime.handle(), messages, senders, receivers, data))
     }
 
-    /// All-to-all
+    /// All-to-all.
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub async fn all_to_all(&mut self, message: AllToAll, communicator: &Communicator, send_data: Vec<NonNullData>, receive_data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.all_to_all(self.runtime.handle(), message, communicator, send_data, receive_data).await
     }
 
-    /// All-to-all (blocking)
+    /// All-to-all (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub fn all_to_all_blocking(&mut self, message: AllToAll, communicator: &Communicator, send_data: Vec<NonNullData>, receive_data: Vec<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.all_to_all(self.runtime.handle(), message, communicator, send_data, receive_data))
     }
 
-    /// Multi all-to-all
+    /// Multi all-to-all.
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub async fn multi_all_to_all(&mut self, messages: Vec<AllToAll>, communicator: &Communicator, send_data: Vec2d<NonNullData>, receive_data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.state.multi_all_to_all(self.runtime.handle(), messages, communicator, send_data, receive_data).await
     }
 
-    /// Multi all-to-all (blocking)
+    /// Multi all-to-all (blocking).
+    ///
     /// # Errors
-    /// Forwards errors from sending and/or receiving
+    /// Forwards errors from sending and/or receiving.
     pub fn multi_all_to_all_blocking(&mut self, messages: Vec<AllToAll>, communicator: &Communicator, send_data: Vec2d<NonNullData>, receive_data: Vec2d<NonNullData>) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.multi_all_to_all(self.runtime.handle(), messages, communicator, send_data, receive_data))
     }
 
+    /// Wait for message consistency.
     #[cfg(feature = "collective-consistency")]
     pub fn wait(&mut self) -> Result<(), SendReceiveError>
     {
         self.runtime.block_on(self.state.ensure_consistency()).map_err(Into::into)
     }
 
+    /// Obtain [`NetworkStatistics`].
     #[cfg(feature = "statistics")]
     pub fn network_statistics(&mut self) -> NetworkStatistics
     {
@@ -678,6 +740,7 @@ impl Queue
 #[cfg(feature = "collective-consistency")]
 impl Drop for Queue
 {
+    /// With the "collective-consistency" feature, the queue blocks in the destructor until consistency can be ensured.
     fn drop(&mut self)
     {
         self.runtime.block_on(self.state.ensure_consistency()).unwrap()

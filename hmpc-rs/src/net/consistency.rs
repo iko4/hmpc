@@ -1,21 +1,23 @@
-use std::collections::hash_map::{Entry, Keys};
 use std::collections::HashMap;
+use std::collections::hash_map::{Entry, Keys};
 
 use log::{debug, error, warn};
 
+#[cfg(feature = "sessions")]
+use super::SessionID;
 use super::errors::{ConsistencyCheckError, SendError};
 use super::hash::Hash;
 use super::sign::{PublicKey, Signature};
-#[cfg(feature = "sessions")]
-use super::SessionID;
-use super::{metadata, Communicator, Config, ConsistencyCheckCommand, ConsistencyCheckMessage, MessageDatatype, MessageID, MessageKind, NetChannel, NetCommand, PartyID, SendMessage, MESSAGE_FEATURE_FLAGS, MESSAGE_FORMAT_VERSION};
+use super::{Communicator, Config, ConsistencyCheckCommand, ConsistencyCheckMessage, MESSAGE_FEATURE_FLAGS, MESSAGE_FORMAT_VERSION, MessageDatatype, MessageID, MessageKind, NetChannel, NetCommand, PartyID, SendMessage, metadata};
 
+/// Information to be checked for a single message: Does the signature match the hashed data (plus all other metadata that comes from a [`ConsistencyCheckKey`] and other objects)?
 struct ConsistencyCheckData
 {
     hash: Hash,
     signature: Signature,
 }
 
+/// Metadata to identify a consistency check.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 struct ConsistencyCheckKey
 {
@@ -47,6 +49,11 @@ impl From<ConsistencyCheckMessage> for (ConsistencyCheckKey, ConsistencyCheckDat
     }
 }
 
+/// All information needed for a consistency check of a collective communication operation.
+///
+/// This includes the own received data,
+/// all other receivers involved in the operation (including what they received),
+/// and a flag that indicates if the check was requested/registered locally.
 struct ConsistencyCheckValue
 {
     received: Option<ConsistencyCheckData>,
@@ -55,21 +62,28 @@ struct ConsistencyCheckValue
 }
 impl ConsistencyCheckValue
 {
+    /// Create new [`ConsistencyCheckValue`] from a local request for a consistency check.
     fn new_request(receivers: Communicator) -> Self
     {
         Self { received: None, receivers: receivers.iter().map(|&party| (party, None)).collect(), registered: true }
     }
 
+    /// Create new [`ConsistencyCheckValue`] from a received consistency check request of another party.
     fn new_received(receiver: PartyID, check: ConsistencyCheckData) -> Self
     {
         Self { received: None, receivers: HashMap::from([(receiver, Some(check))]), registered: false }
     }
 
+    /// Create new [`ConsistencyCheckValue`] from a message that needs to be checked.
     fn new_received_data(check: ConsistencyCheckData) -> Self
     {
         Self { received: Some(check), receivers: HashMap::new(), registered: false }
     }
 
+    /// Locally request a consistency check of a collective communication operation.
+    ///
+    /// # Errors
+    /// If already registered or if `self.receivers` contains a check that is not included in `receivers`.
     fn register(&mut self, receivers: &Communicator) -> Result<bool, ConsistencyCheckError>
     {
         if self.registered
@@ -95,6 +109,10 @@ impl ConsistencyCheckValue
         Ok(self.received.is_some())
     }
 
+    /// Add consistency check message from other party.
+    ///
+    /// # Errors
+    /// If a consistency check from that party is already available or if that party is not part of the registered parties.
     fn receive(&mut self, receiver: PartyID, check: ConsistencyCheckData) -> Result<(), ConsistencyCheckError>
     {
         match self.receivers.entry(receiver)
@@ -122,6 +140,10 @@ impl ConsistencyCheckValue
         Ok(())
     }
 
+    /// Add message to be checked.
+    ///
+    /// # Errors
+    /// If the message is already available.
     fn receive_data(&mut self, check: ConsistencyCheckData) -> Result<bool, ConsistencyCheckError>
     {
         if self.received.is_some()
@@ -133,6 +155,16 @@ impl ConsistencyCheckValue
         Ok(self.registered)
     }
 
+    /// Check the consistency of the collective communication operation.
+    ///
+    /// If the test cannot be performed yet, return `Ok(false)`.
+    /// If the test passed, return `Ok(true)`.
+    /// Otherwise, return an error corresponding to the failed test.
+    ///
+    /// If the consistency check was successful, all parties with a passed test are drained.
+    ///
+    /// # Errors
+    /// If the consistency check was performed but failed.
     fn check(&mut self, metadata: &ConsistencyCheckKey, verification_keys: &HashMap<PartyID, PublicKey>, #[cfg(feature = "sessions")] session: SessionID) -> Result<bool, ConsistencyCheckError>
     {
         if !self.registered
@@ -176,19 +208,24 @@ impl ConsistencyCheckValue
         Ok(true)
     }
 
+    /// Indicates if all tests ([`Self::check`]) are done.
+    ///
+    /// If not, more information is required (either a local registration, the own message to be checked, or more consistency checks from other parties).
     fn is_done(&self) -> bool
     {
         self.registered && self.received.is_some() && self.receivers.is_empty()
     }
 
+    /// All parties that are registered or sent a consistency check.
     fn keys(&self) -> Keys<PartyID, Option<ConsistencyCheckData>>
     {
         self.receivers.keys()
     }
 
-    /// Get the received data (hash and signature)
+    /// Get the received data (hash and signature).
+    ///
     /// # Panics
-    /// If no data was received before
+    /// If no data was received before.
     fn data(&self) -> &ConsistencyCheckData
     {
         // PANICS: Called below only if it is clear that data was received
@@ -196,6 +233,7 @@ impl ConsistencyCheckValue
     }
 }
 
+/// Check the signature for a single message.
 fn check_signature(metadata: &ConsistencyCheckKey, receiver: PartyID, check: &ConsistencyCheckData, verification_keys: &HashMap<PartyID, PublicKey>, #[cfg(feature = "sessions")] session: SessionID) -> Result<(), ConsistencyCheckError>
 {
     let data =
@@ -219,6 +257,7 @@ fn check_signature(metadata: &ConsistencyCheckKey, receiver: PartyID, check: &Co
         .or(Err(ConsistencyCheckError::InconsistentSignatureVerification))
 }
 
+/// Send a consistency check message to all other parties that are involved in the collective communication operation.
 async fn notify_parties<Receivers>(id: PartyID, metadata: &ConsistencyCheckKey, receivers: Receivers, data: &ConsistencyCheckData, net_channel: &NetChannel) -> Result<(), SendError>
 where
     Receivers: Iterator<Item = PartyID>,
@@ -255,11 +294,16 @@ where
     Ok(())
 }
 
+/// Check if everything is consistent.
+///
+/// All consistency checks that are done are removed below.
+/// This leaves only consistency checks that are either registered and not done (should be still checked) or the ones that are not registered (these can be ignored because we do not need them yet).
 fn is_consistent(consistency: &HashMap<ConsistencyCheckKey, ConsistencyCheckValue>) -> bool
 {
     consistency.values().all(|value| !value.registered)
 }
 
+/// Notify waiting threads that everything is consistent.
 fn notify_requests(open_requests: &mut Vec<tokio::sync::oneshot::Sender<Result<(), ConsistencyCheckError>>>)
 {
     for request in open_requests.drain(..)
@@ -271,6 +315,7 @@ fn notify_requests(open_requests: &mut Vec<tokio::sync::oneshot::Sender<Result<(
     }
 }
 
+/// Create loop for handling collective consistency, instructed by [`ConsistencyCheckCommand`]s.
 pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio::sync::mpsc::Receiver<ConsistencyCheckCommand>, net_channel: NetChannel)
 {
     // PANICS: Calling code checks that config.session is not None and contains a value
@@ -314,8 +359,8 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                             session,
                         )
                         {
-                            Ok(false) => (), // not ready
                             Err(e) => error!("[Party {}] Error when checking: {:?}", id, e),
+                            Ok(false) => (), // not ready
                             Ok(true) =>
                             {
                                 if value.is_done()
@@ -359,8 +404,8 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                             session,
                         )
                         {
-                            Ok(false) => (), // not ready
                             Err(e) => error!("[Party {}] Error when checking: {:?}", id, e),
+                            Ok(false) => (), // not ready
                             Ok(true) =>
                             {
                                 if value.is_done()
@@ -412,8 +457,8 @@ pub(super) async fn run(id: PartyID, config: Config, mut receive_channel: tokio:
                             session,
                         )
                         {
-                            Ok(false) => (), // not ready
                             Err(e) => error!("[Party {}] Error when checking: {:?}", id, e),
+                            Ok(false) => (), // not ready
                             Ok(true) =>
                             {
                                 if value.is_done()
