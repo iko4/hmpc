@@ -26,7 +26,7 @@ add_dependencies(examples ${HMPC_EXAMPLE_TARGETS})
 # Test for examples
 if (HMPC_BUILD_TESTING AND HMPC_TEST_EXAMPLES)
     foreach(TARGET ${HMPC_EXAMPLE_TARGETS})
-        add_test(NAME "Test examples/${TARGET}" COMMAND ${TARGET} 1 1)
+        add_test(NAME "Test example: ${TARGET}" COMMAND ${TARGET} 1 1)
     endforeach()
 endif()
 
