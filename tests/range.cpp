@@ -19,10 +19,10 @@ TEST_CASE("Range", "[range]")
 
     constexpr auto s = hmpc::range(y, x);
 
-    REQUIRE(s.start == 4);
+    REQUIRE(s.start == 2);
     REQUIRE(s.end == 42);
-    REQUIRE(r.step == 1);
-    CHECK_FALSE(r.contains(hmpc::constants::zero));
-    CHECK_FALSE(r.contains(x));
-    CHECK(r.contains(y));
+    REQUIRE(s.step == 1);
+    CHECK_FALSE(s.contains(hmpc::constants::zero));
+    CHECK_FALSE(s.contains(x));
+    CHECK(s.contains(y));
 }
