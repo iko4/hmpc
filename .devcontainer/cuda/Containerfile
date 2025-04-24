@@ -85,7 +85,7 @@ RUN --mount=type=bind,source=requirements.txt,target=/home/hmpc-dev/requirements
  && cd /workspaces \
  && git clone https://github.com/microsoft/vcpkg --depth=1 \
  && $VCPKG_ROOT/bootstrap-vcpkg.sh -disableMetrics \
- && pip3 install -r $HOME/requirements.txt --no-warn-script-location && rm $HOME/requirements.txt
+ && pip3 install -r $HOME/requirements.txt --no-warn-script-location
 WORKDIR /workspaces/hmpc
 
 # development container image with extra packages for MP-SPDZ

@@ -52,6 +52,21 @@ docker buildx build --tag hmpc:cuda --build-arg cuda_version="${CUDA_VERSION:?}"
 docker run --rm -it --gpus all --mount type=bind,source="$(pwd)",target=/workspaces/hmpc --mount type=bind,source="${CUDA_HOME:?}",target="/opt/cuda-${CUDA_VERSION:?}" hmpc:cuda
 ```
 
+Note:
+For using CUDA, the "CUDA_VERSION" and "CUDA_HOME" environment variables need to be set:
+
+- "CUDA_VERSION" should match the installed CUDA version.
+    This value is used to differentiate paths if you have multiple versions of CUDA installed.
+    You can run `nvcc --version` to find the CUDA version for your installation.
+
+    Example: 11.6
+
+- "CUDA_HOME" should point to your installation of the CUDA toolkit.
+    Your installation path can vary based on your operating system and how you installed the CUDA toolkit.
+    You might have the "CUDA_PATH" variable set, then you can use the sam value also for "CUDA_HOME".
+
+    Example: "/usr/local/cuda" or "/usr/local/cuda-11.6"
+
 
 ## Build 🏗
 
