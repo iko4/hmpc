@@ -8,9 +8,7 @@ ARG packages_for=mpspdz
 
 # base container image
 FROM intel/oneapi-runtime@sha256:060ba4aa60a58add8d1d39fd49cd7b3bf274dde0f8ea4a988fdf6eb57abab97e AS base-ubuntu
-ARG cuda_version
-ENV CUDA_VERSION=$cuda_version
-ARG cuda_path=/opt/cuda-${cuda_version:?}
+ARG cuda_path=/opt/cuda
 ENV CUDA_PATH=$cuda_path
 ENV CUDA_HOME=$CUDA_PATH
 ENV CUDA_ROOT=$CUDA_PATH
@@ -54,8 +52,8 @@ ENV CMAKE_ROOT=/opt/cmake
 ENV LLVM_ROOT=/opt/dpcpp
 ENV VCPKG_ROOT=/workspaces/vcpkg
 ENV VCPKG_DISABLE_METRICS=1
-ENV PATH=$LLVM_ROOT/bin:$CMAKE_ROOT/bin:/home/hmpc-dev/.cargo/bin:$PATH
-ENV LD_LIBRARY_PATH=$LLVM_ROOT/lib/x86_64-unknown-linux-gnu:$LLVM_ROOT/lib:$CUDA_LIB_PATH:$CUDA_ROOT/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+ENV PATH=$LLVM_ROOT/bin:$CMAKE_ROOT/bin:/home/hmpc-dev/.cargo/bin:$CUDA_BIN_DIR:$PATH
+ENV LD_LIBRARY_PATH=$LLVM_ROOT/lib/x86_64-unknown-linux-gnu:$LLVM_ROOT/lib:$CUDA_LIB_DIR:$CUDA_LIB_PATH:$CUDA_ROOT/extras/CUPTI/lib64:$LD_LIBRARY_PATH
 ENV CPATH=$LLVM_ROOT/include:$LLVM_ROOT/include/sycl:$CPATH
 COPY --from=dpcpp-builder /workspaces/dpcpp/llvm/build/install/ $LLVM_ROOT
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends \
